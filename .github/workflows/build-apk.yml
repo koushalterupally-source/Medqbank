@@ -1,3 +1,4 @@
+
 name: Build MedQuiz APK
 
 on:
@@ -25,6 +26,7 @@ jobs:
       run: |
         cd android
         chmod +x gradlew
+        dos2unix gradlew || true
         ./gradlew assembleDebug --no-daemon
 
     - name: Upload APK
