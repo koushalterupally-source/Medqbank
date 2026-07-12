@@ -1,28 +1,211 @@
-#!/bin/sh
-DIRNAME=$(dirname "$0")
-APP_HOME=$(cd "$DIRNAME" && pwd -P)
+#!/usr/bin/env sh
+
+#
+# Copyright 2015 the original author or authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+##############################################################################
+##
+##  Gradle start up script for UN*X
+##
+##############################################################################
+
+# Attempt to set APP_HOME
+# Resolve links: $0 may be a symlink
+PRG="$0"
+# Need this for relative symlinks.
+while [ -h "$PRG" ] ; do
+    ls -ld "$PRG"
+    link=`expr "$PRG" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+        PRG="$link"
+    else
+        PRG=`dirname "$PRG"`"/$link"
+    fi
+done
+SAVED="`pwd`"
+cd "`dirname \"$PRG\"`/" >/dev/null
+APP_HOME="`pwd -P`"
+cd "$SAVED" >/dev/null
+
+APP_NAME="Gradle"
+APP_BASE_NAME=`basename "$0"`
+
+# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+
+# Use the maximum available, or set MAX_FD != maximum.
+MAX_FD="maximum"
+
+warn () {
+    echo "$*"
+}
+
+die () {
+    echo
+    echo "$*"
+    echo
+    exit 1
+}
+
+# OS specific support (must be 'true' or 'false').
+cygwin=false
+msys=false
+darwin=false
+nonstop=false
+case "`uname`" in
+  CYGWIN* )
+    cygwin=true
+    ;;
+  Darwin* )
+    darwin=true
+    ;;
+  MSYS* | MINGW* )
+    msys=true
+    ;;
+  NONSTOP* )
+    nonstop=true
+    ;;
+esac
+
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
-if [ ! -f "$CLASSPATH" ]; then
-    echo "Downloading Gradle wrapper..."
-    curl -sL "https://raw.githubusercontent.com/nicovince/gradlew/refs/heads/master/gradle/wrapper/gradle-wrapper.jar" -o "$CLASSPATH" 2>/dev/null
-    if [ ! -f "$CLASSPATH" ] || [ ! -s "$CLASSPATH" ]; then
-        # Alternative: download full gradle and extract wrapper
-        GRADLE_VER=8.5
-        curl -sL "https://services.gradle.org/distributions/gradle-${GRADLE_VER}-bin.zip" -o /tmp/gradle.zip
-        cd /tmp && /tmp/jdk-17.0.2/bin/jar xf gradle.zip "gradle-${GRADLE_VER}/lib/gradle-wrapper.jar" 2>/dev/null
-        cp "/tmp/gradle-${GRADLE_VER}/lib/gradle-wrapper.jar" "$CLASSPATH" 2>/dev/null
-        cd "$APP_HOME"
+
+# Determine the Java command to use to start the JVM.
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        # IBM's JDK on AIX uses strange locations for the executables
+        JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+        JAVACMD="$JAVA_HOME/bin/java"
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+else
+    JAVACMD="java"
+    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+fi
+
+# Increase the maximum file descriptors if we can.
+if [ "$cygwin" = "false" -a "$msys" = "false" ] && command -v ulimit >/dev/null 2>&1 ; then
+    if [ "$darwin" = "true" ] && [ "$MAX_FD" = "maximum" ] ; then
+        MAX_FD=`/usr/sbin/sysctl -n kern.maxfilesperproc`
+    else
+        MAX_FD=`ulimit -H -n`
+    fi
+    if [ $? -eq 0 ] ; then
+        ulimit -n $MAX_FD
+        if [ $? -ne 0 ] ; then
+            warn "Could not set maximum file descriptor limit: $MAX_FD"
+        fi
+    else
+        warn "Could not query maximum file descriptor limit: $MAX_FD"
     fi
 fi
 
-if [ -n "$JAVA_HOME" ]; then
-    JAVACMD="$JAVA_HOME/bin/java"
-else
-    JAVACMD="java"
+# For Darwin, add options to specify how the application appears in the dock
+if $darwin; then
+    GRADLE_OPTS="$GRADLE_OPTS \"-Xdock:name=$APP_NAME\" \"-Xdock:icon=$APP_HOME/media/gradle.icns\""
 fi
 
-exec "$JAVACMD" -Xmx64m -Xms64m \
-    "-Dorg.gradle.appname=gradlew" \
-    -classpath "$CLASSPATH" \
-    org.gradle.wrapper.GradleWrapperMain "$@"
+# For Cygwin or MSYS, switch paths to Windows format before running java
+if [ "$cygwin" = "true" -o "$msys" = "true" ] ; then
+    APP_HOME=`cygpath --path --mixed "$APP_HOME"`
+    CLASSPATH=`cygpath --path --mixed "$CLASSPATH"`
+
+    JAVACMD=`cygpath --unix "$JAVACMD"`
+
+    # We build the pattern for arguments to be converted via cygpath
+    ROOTDIRSRAW=`find -L / -maxdepth 3 -type d -name java >/dev/null 2>&1 && find -L / -maxdepth 3 -type d -name java | head -1`
+    if [ -n "$ROOTDIRSRAW" ] ; then
+        ROOTDIRS=`echo "$ROOTDIRSRAW" | awk -F / '{ s = ""; for (i = 1; i <= NF-2; i++) s = s "/" $i; if (NF > 2) print s; else print "/"}'`
+        ROOTDIRS=`echo "$ROOTDIRS" | sed 's@\/$@@'`
+        for dir in $ROOTDIRS
+        do
+             if [ -d "$dir/java" ] ; then
+                 ROOTDIRS="$ROOTDIRS""$dir "
+             fi
+        done
+        ROOTDIRS=`echo "$ROOTDIRS" | sed 's/ \+//'`
+        if [ ! -z "$ROOTDIRS" ] ; then
+             ROOTDIRS=`echo "$ROOTDIRS"|tr '\n' ';'`
+        fi
+    fi
+    $JAVACMD -version 2>&1 | grep -q "^openjdk version" \
+    && JAVA_OPTS="$JAVA_OPTS -XX:+IgnoreUnrecognizedVMOptions -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:G1NewCollectionHeuristicPercent=30 -XX:+DisableExplicitGC -XX:-ResizePLT -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=. -XX:OnOutOfMemoryError='kill -9 %p'" \
+    || true
+    CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
+
+    JAVACMD=`cygpath --unix "$JAVACMD"`
+
+    # We build the pattern for arguments to be converted via cygpath
+    ROOTDIRSRAW=`find -L / -maxdepth 3 -type d -name java >/dev/null 2>&1 && find -L / -maxdepth 3 -type d -name java | head -1`
+    if [ -n "$ROOTDIRSRAW" ] ; then
+        ROOTDIRS=`echo "$ROOTDIRSRAW" | awk -F / '{ s = ""; for (i = 1; i <= NF-2; i++) s = s "/" $i; if (NF > 2) print s; else print "/"}'`
+        ROOTDIRS=`echo "$ROOTDIRS" | sed 's@\/$@@'`
+        for dir in $ROOTDIRS
+        do
+             if [ -d "$dir/java" ] ; then
+                 ROOTDIRS="$ROOTDIRS""$dir "
+             fi
+        done
+        ROOTDIRS=`echo "$ROOTDIRS" | sed 's/ \+//'`
+        if [ ! -z "$ROOTDIRS" ] ; then
+             ROOTDIRS=`echo "$ROOTDIRS"|tr '\n' ';'`
+        fi
+    fi
+    $JAVACMD -version 2>&1 | grep -q "^openjdk version" \
+    && JAVA_OPTS="$JAVA_OPTS -XX:+IgnoreUnrecognizedVMOptions -XX:+UseG1GC -XX:+UseStringDeduplication -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:G1NewCollectionHeuristicPercent=30 -XX:+DisableExplicitGC -XX:-ResizePLT -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=. -XX:OnOutOfMemoryError='kill -9 %p'" \
+    || true
+
+fi
+
+# Escape application args
+save () {
+    for i do printf %s\\n "$i" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' /" ; done
+    echo " "
+}
+APP_ARGS=`save "$@"`
+
+# Collect all arguments for the java command, stacking in reverse order:
+#   * GRADLE_OPTS
+#   * DEFAULT_JVM_OPTS
+#   * JAVA_OPTS
+#   * GRADLE_ARGS
+
+# The appmule/wrapper/gradle-wrapper.jar added by Gradle.
+set -- \
+        "-Dorg.gradle.appname=$APP_BASE_NAME" \
+        -classpath "$CLASSPATH" \
+        org.gradle.wrapper.GradleWrapperMain \
+        "$@"
+
+# Use "xargs" to make use of all the processors logic
+# in /etc/profile.so as well as support for large command line strings.
+find "$APP_HOME" -path "*/conf/profile" -o -path "*/conf/profilerc" | xargs cat 2>/dev/null | \
+    grep property | grep "systemProp" | sed s/^/set\ / | sed s/=/ "=" > "$APP_HOME/gradle.properties.env"
+[ -f "$APP_HOME/gradle.properties.env" ] && . "$APP_HOME/gradle.properties.env"
+exec "$JAVACMD" "${JVM_OPTS[@]}" "${JAVA_OPTS[@]}" \
+        -Dorg.gradle.appname="$APP_BASE_NAME" \
+        -classpath "$CLASSPATH" \
+        org.gradle.wrapper.GradleWrapperMain \
+        "$@"
