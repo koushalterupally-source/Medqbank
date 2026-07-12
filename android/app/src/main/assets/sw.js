@@ -1,4 +1,4 @@
-const CACHE_NAME = 'medquiz-v2';
+const CACHE_NAME = 'medquiz-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -43,21 +43,22 @@ self.addEventListener('fetch', e => {
     );
   } else {
     e.respondWith(
-      caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          // Cache successful responses
-          if (res.status === 200 || res.status === 0) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-          }
-          return res;
-        }).catch(err => {
-          console.log('Fetch failed, offline fallback:', err);
+      fetch(e.request).then(res => {
+        // Cache successful GET responses
+        if (e.request.method === 'GET' && (res.status === 200 || res.status === 0)) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        }
+        return res;
+      }).catch(err => {
+        console.log('Fetch failed, trying cache:', err);
+        return caches.match(e.request).then(cached => {
+          if (cached) return cached;
           // Fallback to index.html for navigation requests
           if (e.request.mode === 'navigate') {
             return caches.match('./index.html') || caches.match('./');
           }
+          return new Response('Network error happened', { status: 408, headers: { 'Content-Type': 'text/plain' } });
         });
       })
     );

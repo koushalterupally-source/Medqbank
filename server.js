@@ -46,8 +46,21 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
     
-    res.writeHead(200, { 'Content-Type': contentType });
-    fs.createReadStream(filePath).pipe(res);
+    const stat = fs.statSync(filePath);
+    const headers = { 
+      'Content-Type': contentType,
+      'Content-Length': stat.size
+    };
+    if (filePath.endsWith('sw.js') || filePath.endsWith('index.html')) {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+    }
+    
+    res.writeHead(200, headers);
+    if (req.method === 'HEAD') {
+      res.end();
+    } else {
+      fs.createReadStream(filePath).pipe(res);
+    }
   } else {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('404 Not Found: ' + parsedUrl.pathname);
