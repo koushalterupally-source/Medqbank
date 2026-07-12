@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MedQuiz</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+--bg:#0d1117;--surface:#161b22;--card:#21262d;--border:#30363d;
+--text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+--accent:#2f81f7;--green:#3fb950;--red:#f85149;--yellow:#d29922;--orange:#db6d28;
+--radius:10px;--toolbar-h:56px;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
+.pages{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--toolbar-h) + 16px)}
+.page{display:none;padding:16px}
+.page.active{display:block}
+
+/* Toolbar */
+.toolbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:var(--toolbar-h);background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100}
+.toolbar button{flex:1;background:none;border:none;color:var(--text2);font-size:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:color .2s}
+.toolbar button .icon{font-size:22px}
+.toolbar button.active{color:var(--accent)}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.section-title{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--text)}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 8px;text-align:center}
+.stat-box .val{font-size:22px;font-weight:700;color:var(--accent)}
+.stat-box .lbl{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* Subject grid */
+.subject-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.subject-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:transform .1s,border-color .2s}
+.subject-card:active{transform:scale(.97)}
+.subject-card .sc-name{font-size:14px;font-weight:600;margin-bottom:6px}
+.subject-card .sc-count{font-size:11px;color:var(--text2);margin-bottom:8px}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-bar .fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+
+/* Thought / Topic */
+.quote-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;position:relative}
+.quote-card .emoji{font-size:28px;margin-bottom:8px}
+.quote-card .q-text{font-size:14px;line-height:1.5;color:var(--text);font-style:italic}
+.quote-card .q-author{font-size:12px;color:var(--text2);margin-top:8px}
+.topic-card{background:linear-gradient(135deg,#1a2332,#162230);border:1px solid var(--accent);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.topic-card .emoji{font-size:24px}
+.topic-card .t-title{font-size:14px;font-weight:600;color:var(--accent);margin-top:6px}
+.topic-card .t-desc{font-size:12px;color:var(--text2);margin-top:4px}
+
+/* PYQ page */
+.search-box{width:100%;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;outline:none;margin-bottom:12px}
+.search-box:focus{border-color:var(--accent)}
+.exam-section{margin-bottom:16px}
+.exam-header{font-size:13px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.pyq-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px;cursor:pointer}
+.pyq-item:active{border-color:var(--accent)}
+.pyq-item .pq-subject{font-size:12px;color:var(--accent);margin-bottom:4px}
+.pyq-item .pq-q{font-size:13px;line-height:1.4;color:var(--text)}
+.pyq-item .pq-meta{font-size:11px;color:var(--text3);margin-top:6px}
+
+/* Anki page */
+.anki-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.anki-stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.anki-stat .as-val{font-size:24px;font-weight:700}
+.anki-stat .as-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+.anki-stat.new .as-val{color:var(--accent)}
+.anki-stat.learning .as-val{color:var(--orange)}
+.anki-stat.due .as-val{color:var(--green)}
+.btn{display:inline-block;padding:10px 24px;border-radius:var(--radius);border:none;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn:active{opacity:.8}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-block{display:block;width:100%;text-align:center}
+.btn-sm{padding:6px 14px;font-size:12px}
+.streak-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.streak-bar .fire{font-size:24px}
+.streak-bar .streak-text{font-size:13px;color:var(--text)}
+.streak-bar .streak-num{font-size:18px;font-weight:700;color:var(--yellow)}
+
+/* Card review */
+.review-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:12px;min-height:200px}
+.review-card .cloze-hidden{background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer;display:inline-block}
+.review-card .cloze-revealed{background:rgba(47,129,247,.15);color:var(--accent);padding:2px 8px;border-radius:4px;border:1px solid var(--accent)}
+.review-btns{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:12px}
+.review-btns button{padding:10px 4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--text);font-size:11px;cursor:pointer}
+.review-btns button:active{opacity:.7}
+.review-btns .rb-again{border-color:var(--red);color:var(--red)}
+.review-btns .rb-hard{border-color:var(--orange);color:var(--orange)}
+.review-btns .rb-good{border-color:var(--green);color:var(--green)}
+.review-btns .rb-easy{border-color:var(--accent);color:var(--accent)}
+
+/* Quiz mode */
+.quiz-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;display:none;flex-direction:column;max-width:480px;margin:0 auto}
+.quiz-overlay.show{display:flex}
+.quiz-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+.quiz-header .qh-title{font-size:15px;font-weight:600}
+.quiz-header .qh-close{background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:4px 8px}
+.quiz-progress{height:3px;background:var(--border)}
+.quiz-progress .fill{height:100%;background:var(--accent);transition:width .3s}
+.quiz-body{flex:1;overflow-y:auto;padding:16px}
+.quiz-nav{display:flex;gap:8px;padding:12px 16px;background:var(--surface);border-top:1px solid var(--border)}
+.quiz-nav button{flex:1}
+.q-text{font-size:15px;line-height:1.5;margin-bottom:16px;font-weight:500}
+.q-options{display:flex;flex-direction:column;gap:8px}
+.q-opt{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:14px;font-size:14px;cursor:pointer;transition:border-color .2s;line-height:1.4;text-align:left;color:var(--text)}
+.q-opt.selected{border-color:var(--accent)}
+.q-opt.correct{border-color:var(--green);background:rgba(63,185,80,.1)}
+.q-opt.wrong{border-color:var(--red);background:rgba(248,81,73,.1)}
+.q-opt.disabled{pointer-events:none}
+.q-explanation{margin-top:16px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;line-height:1.6;display:none}
+.q-explanation.show{display:block}
+.q-explanation .exp-title{font-weight:600;margin-bottom:8px;font-size:14px}
+.exp-section{margin-bottom:10px}
+.exp-section .exp-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.exp-short .exp-label{color:var(--green)}
+.exp-detail .exp-label{color:var(--text2)}
+.exp-ref .exp-label{color:var(--yellow)}
+.exp-wrong .exp-label{color:var(--red)}
+.exp-examiner .exp-label{color:var(--accent)}
+.exp-diff .exp-label{color:var(--orange)}
+.exp-mnemonic .exp-label{color:var(--green)}
+.exp-algo .exp-label{color:var(--accent)}
+
+/* Nav dots */
+.nav-dots{display:flex;justify-content:center;gap:6px;padding:8px 0;flex-wrap:wrap}
+.nav-dot{width:24px;height:24px;border-radius:50%;background:var(--card);border:2px solid var(--border);font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2)}
+.nav-dot.current{border-color:var(--accent);color:var(--accent)}
+.nav-dot.answered{background:var(--accent);border-color:var(--accent);color:#fff}
+.nav-dot.correct-dot{background:var(--green);border-color:var(--green);color:#fff}
+.nav-dot.wrong-dot{background:var(--red);border-color:var(--red);color:#fff}
+
+/* Results */
+.results-screen{display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
+.results-screen.show{display:flex}
+.ring-container{position:relative;width:160px;height:160px;margin-bottom:24px}
+.ring-container svg{transform:rotate(-90deg)}
+.ring-container .ring-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:36px;font-weight:700}
+.ring-container .ring-label{position:absolute;top:62%;left:50%;transform:translate(-50%,0);font-size:12px;color:var(--text2)}
+.results-title{font-size:20px;font-weight:700;margin-bottom:8px}
+.results-sub{font-size:14px;color:var(--text2);margin-bottom:24px}
+.results-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;width:100%;margin-bottom:24px}
+.results-stats .rs-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.results-stats .rs-val{font-size:20px;font-weight:700}
+.results-stats .rs-lbl{font-size:11px;color:var(--text2)}
+
+/* Settings */
+.setting-group{margin-bottom:20px}
+.setting-group .sg-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.setting-item{display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px}
+.setting-item .si-label{font-size:14px}
+.setting-item .si-desc{font-size:12px;color:var(--text2);margin-top:2px}
+.toggle{position:relative;width:44px;height:24px;background:var(--border);border-radius:12px;cursor:pointer;transition:background .2s}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle.on::after{transform:translateX(20px)}
+.file-input{display:none}
+.about-text{font-size:13px;color:var(--text2);line-height:1.5}
+.import-area{border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:border-color .2s}
+.import-area:hover,.import-area.dragover{border-color:var(--accent)}
+.import-area .imp-icon{font-size:36px;margin-bottom:8px}
+.import-area .imp-text{font-size:13px;color:var(--text2)}
+
+/* Toast */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 20px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Empty state */
+.empty-state{text-align:center;padding:40px 16px;color:var(--text2)}
+.empty-state .es-icon{font-size:48px;margin-bottom:12px}
+.empty-state .es-text{font-size:14px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="pages">
+<!-- HOME -->
+<div class="page active" id="page-home">
+<div class="quote-card" id="thought-card">
+<div class="emoji">💡</div>
+<div class="q-text" id="thought-text"></div>
+<div class="q-author" id="thought-author"></div>
+</div>
+<div class="topic-card" id="topic-card">
+<div class="emoji">📌</div>
+<div class="t-title" id="topic-title"></div>
+<div class="t-desc" id="topic-desc"></div>
+</div>
+<div class="stats-row">
+<div class="stat-box"><div class="val" id="stat-total">0</div><div class="lbl">Total Qs</div></div>
+<div class="stat-box"><div class="val" id="stat-attempted">0</div><div class="lbl">Attempted</div></div>
+<div class="stat-box"><div class="val" id="stat-accuracy">0%</div><div class="lbl">Accuracy</div></div>
+</div>
+<div class="section-title">Subjects</div>
+<div class="subject-grid" id="subject-grid"></div>
+</div>
+
+<!-- PYQ -->
+<div class="page" id="page-pyq">
+<div class="section-title">Previous Year Questions</div>
+<input class="search-box" id="pyq-search" placeholder="Search questions..." type="text">
+<div id="pyq-list"></div>
+</div>
+
+<!-- CEREB -->
+<div class="page" id="page-cereb">
+<div class="section-title" id="cereb-title">Cerebellum</div>
+<div id="cereb-subject-view">
+<div class="subject-grid" id="cereb-subject-grid"></div>
+</div>
+<div id="cereb-subtopic-view" style="display:none">
+<button class="btn btn-sm" onclick="cerebBackToSubjects()">← Subjects</button>
+<div id="cereb-subtopic-list" style="margin-top:10px"></div>
+</div>
+</div>
+
+<!-- ANKI -->
+<div class="page" id="page-anki">
+<div class="section-title">Spaced Repetition</div>
+<div class="streak-bar">
+<div class="fire">🔥</div>
+<div><div class="streak-text">Study Streak</div><div class="streak-num" id="anki-streak">0 days</div></div>
+</div>
+<div class="anki-stats">
+<div class="anki-stat new"><div class="as-val" id="anki-new">0</div><div class="as-lbl">New</div></div>
+<div class="anki-stat learning"><div class="as-val" id="anki-learning">0</div><div class="as-lbl">Learning</div></div>
+<div class="anki-stat due"><div class="as-val" id="anki-due">0</div><div class="as-lbl">Due</div></div>
+</div>
+
+<div class="anki-card-graph" id="anki-graph-container" style="margin-bottom: 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <span style="font-size: 13px; font-weight: 600; color: var(--text);">Study History (Last 7 Days)</span>
+    <span id="anki-total-studied-week" style="font-size: 11px; color: var(--text2); background: var(--border); padding: 2px 8px; border-radius: 12px;">0 studied</span>
+  </div>
+  <div id="anki-chart" style="width: 100%; height: 130px; display: flex; justify-content: center; align-items: center;"></div>
+</div>
+<div id="anki-study-area">
+<button class="btn btn-primary btn-block" id="btn-study" onclick="startAnkiStudy()">📚 Study Now</button>
+<div class="empty-state" id="anki-empty" style="display:none">
+<div class="es-icon">🎉</div>
+<div class="es-text">No cards due! Get some wrong in quiz mode to create cards.</div>
+</div>
+</div>
+<div id="anki-review-area" style="display:none">
+<div class="review-card" id="anki-card-display"></div>
+<div id="anki-answer-btn" style="text-align:center;margin-bottom:12px">
+<button class="btn btn-primary" onclick="revealAnkiAnswer()">Show Answer</button>
+</div>
+<div class="review-btns" id="anki-review-btns" style="display:none">
+<button class="rb-again" onclick="rateAnkiCard(1)">Again<br><small>1m</small></button>
+<button class="rb-hard" onclick="rateAnkiCard(2)">Hard<br><small>6m</small></button>
+<button class="rb-good" onclick="rateAnkiCard(3)">Good<br><small>10m</small></button>
+<button class="rb-easy" onclick="rateAnkiCard(4)">Easy<br><small>4d</small></button>
+</div>
+</div>
+<div id="anki-done" style="display:none" class="empty-state">
+<div class="es-icon">✅</div>
+<div class="es-text">All done for today! Come back tomorrow.</div>
+<div style="margin-top:16px"><span id="anki-done-count" style="font-size:24px;font-weight:700;color:var(--green)">0</span><br><span style="font-size:12px;color:var(--text2)">cards studied today</span></div>
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+<div class="section-title">Settings</div>
+<div class="setting-group">
+<div class="sg-title">Data</div>
+<div class="import-area" id="import-area" onclick="document.getElementById('file-input').click()">
+<div class="imp-icon">📥</div>
+<div class="imp-text">Tap to import any HTML question file<br><small>CEREB, tables, text lists — all formats supported</small></div>
+</div>
+<input type="file" id="file-input" class="file-input" accept=".html,.htm" multiple>
+</div>
+<div class="setting-group">
+<div class="sg-title">Preferences</div>
+<div class="setting-item">
+<div><div class="si-label">Show Explanations</div><div class="si-desc">Display detailed explanations in quiz</div></div>
+<div class="toggle on" id="toggle-explanations" onclick="toggleSetting('showExplanations')"></div>
+</div>
+</div>
+<div class="setting-group">
+<div class="sg-title">Danger Zone</div>
+<div class="setting-item" onclick="resetProgress()" style="cursor:pointer">
+<div><div class="si-label" style="color:var(--red)">Reset All Progress</div><div class="si-desc">Clear all quiz attempts and Anki cards</div></div>
+</div>
+<div class="setting-item" onclick="resetEverything()" style="cursor:pointer">
+<div><div class="si-label" style="color:var(--red)">Reset Everything</div><div class="si-desc">Clear all data including imported questions</div></div>
+</div>
+</div>
+<div class="setting-group">
+<div class="sg-title">About</div>
+<div class="card">
+<div class="about-text">
+<strong>MedQuiz</strong> v1.0<br>
+A medical exam preparation app with spaced repetition.<br><br>
+• Built-in questions covering key medical topics<br>
+• Import your own HTML question files<br>
+• Anki-style spaced repetition for wrong answers<br>
+• Track your progress across subjects
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Bottom Toolbar -->
+<div class="toolbar">
+<button class="active" onclick="switchPage('home')"><span class="icon">🏠</span><span>Home</span></button>
+<button onclick="switchPage('pyq')"><span class="icon">📋</span><span>PYQ</span></button>
+<button onclick="switchPage('cereb')"><span class="icon">🧬</span><span>Cereb</span></button>
+<button onclick="switchPage('anki')"><span class="icon">🧠</span><span>Anki</span></button>
+<button onclick="switchPage('settings')"><span class="icon">⚙️</span><span>Settings</span></button>
+</div>
+
+<!-- Quiz Overlay -->
+<div class="quiz-overlay" id="quiz-overlay">
+<div class="quiz-header">
+<div class="qh-title" id="quiz-title">Quiz</div>
+<button class="qh-close" onclick="closeQuiz()">✕</button>
+</div>
+<div class="quiz-progress"><div class="fill" id="quiz-progress-fill"></div></div>
+<div class="quiz-body" id="quiz-body"></div>
+<div class="quiz-nav" id="quiz-nav">
+<button class="btn btn-sm" onclick="quizPrev()" id="btn-prev">← Prev</button>
+<button class="btn btn-sm btn-primary" onclick="quizNext()" id="btn-next">Next →</button>
+<button class="btn btn-sm btn-primary" onclick="quizSubmit()" id="btn-submit" style="display:none">Submit</button>
+</div>
+</div>
+
+<!-- Results Overlay -->
+<div class="quiz-overlay" id="results-overlay">
+<div class="quiz-header">
+<div class="qh-title">Results</div>
+<button class="qh-close" onclick="closeResults()">✕</button>
+</div>
+<div class="quiz-body">
+<div class="results-screen show" id="results-content"></div>
+</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ===================== BUILT-IN QUESTIONS =====================
+const BUILTIN_QUESTIONS = [
+{
+id:"b1",subject:"Anatomy",exam:"NEET PG",year:2024,
+question:"Which structure passes through the foramen magnum?",
+options:["Vertebral artery","Internal carotid artery","Facial nerve","Vagus nerve"],
+correct:0,
+explanation:{
+short:"The vertebral arteries (along with medulla oblongata and spinal accessory nerve) pass through the foramen magnum.",
+detail:"The foramen magnum is the largest foramen in the skull. Structures passing through it include: medulla oblongata, meninges, vertebral arteries, anterior and posterior spinal arteries, and the spinal root of the accessory nerve.",
+ref:"Gray's Anatomy, 41st Ed, Chapter 37: The skull is described as having the foramen magnum transmitting the medulla and its coverings, vertebral arteries, and spinal accessory nerve.",
+wrong:["Internal carotid artery passes through the carotid canal in the petrous temporal bone.","Facial nerve passes through the stylomastoid foramen.","Vagus nerve exits through the jugular foramen."],
+examiner:"Tests knowledge of skull base foramina and their contents.",
+differentiator:"The key distinction is that vertebral arteries enter the skull through the foramen magnum, while the internal carotid enters through the carotid canal.",
+mnemonic:"'Very Big AtlaS' — Vertebral arteries, Big (medulla), Anterior/posterior spinal arteries, Spinal accessory nerve"
+}
+},
+{
+id:"b2",subject:"Anatomy",exam:"NEET PG",year:2023,
+question:"The muscle responsible for abduction of the shoulder joint is:",
+options:["Deltoid","Supraspinatus","Infraspinatus","Teres minor"],
+correct:1,
+explanation:{
+short:"Supraspinatus initiates abduction of the shoulder (0-15°), after which deltoid takes over.",
+detail:"Supraspinatus is the primary initiator of abduction. It acts from 0-15° of abduction. After 15°, the deltoid becomes the main abductor. This is why a supraspinatus tear causes difficulty initiating abduction but the arm can be raised once past 15° (assisted by deltoid).",
+ref:"BDC Anatomy, Vol 1, 8th Ed: 'Supraspinatus initiates abduction and deltoid continues it beyond 15 degrees.'",
+wrong:["Deltoid is the main abductor after 15° but does not initiate abduction.","Infraspinatus is an external rotator of the shoulder.","Teres minor is an external rotator and adductor."],
+examiner:"Tests understanding of the initiation of shoulder abduction and the role of the rotator cuff.",
+differentiator:"The critical point is that supraspinatus INITIATES abduction (0-15°). This is a classic clinical correlation question.",
+mnemonic:"'SITS' — Supraspinatus, Infraspinatus, Teres minor, Subscapularis (rotator cuff muscles)"
+}
+},
+{
+id:"b3",subject:"Physiology",exam:"NEET PG",year:2024,
+question:"The normal ejection fraction of the left ventricle is:",
+options:["40-50%","50-60%","55-70%","70-80%"],
+correct:2,
+explanation:{
+short:"Normal LVEF is 55-70%. Below 40% indicates systolic heart failure.",
+detail:"Ejection fraction (EF) is the percentage of blood ejected with each heartbeat. Normal LVEF: 55-70%. Preserved HFpEF: ≥50%. Reduced HFrEF: <40%. Borderline: 41-49%. EF is calculated as (Stroke Volume / End Diastolic Volume) × 100.",
+ref:"Harrison's Principles of Internal Medicine, 21st Ed: 'Normal LVEF ranges from 55% to 70%.'",
+wrong:["40-50% is considered borderline or mildly reduced EF.","50-60% is the lower range of normal but the full normal range is 55-70%.","70-80% is above normal and may indicate hyperdynamic state."],
+examiner:"Tests knowledge of cardiac function parameters and their clinical significance.",
+differentiator:"Remember: Normal EF ≥55%, Heart failure with preserved EF (HFpEF) ≥50%, Heart failure with reduced EF (HFrEF) <40%.",
+mnemonic:"'55 to 70 is alive' — Normal EF range"
+}
+},
+{
+id:"b4",subject:"Physiology",exam:"NEET PG",year:2023,
+question:"Which hormone is secreted by the parafollicular cells (C cells) of the thyroid?",
+options:["Thyroxine (T4)","Triiodothyronine (T3)","Calcitonin","Parathyroid hormone"],
+correct:2,
+explanation:{
+short:"Parafollicular cells (C cells) secrete calcitonin, which lowers blood calcium levels.",
+detail:"C cells are scattered among thyroid follicles. Calcitonin inhibits osteoclastic bone resorption and promotes calcium deposition in bone, thereby lowering serum calcium. It opposes PTH. Clinically, medullary thyroid carcinoma arises from C cells.",
+ref:"Guyton & Hall, 14th Ed: 'The C cells of the thyroid gland secrete calcitonin, a hormone that decreases plasma calcium concentration.'",
+wrong:["T4 is secreted by thyroid follicular cells.","T3 is also secreted by follicular cells (and converted from T4 peripherally).","PTH is secreted by the parathyroid glands, not thyroid C cells."],
+examiner:"Tests basic endocrine physiology and cell type-hormone relationships.",
+differentiator:"C cells = Calcitonin. Follicular cells = T3/T4. Both are in the thyroid but are completely different cell types with different functions.",
+mnemonic:"'C for Calcitonin, C for Calcium-lowering'"
+}
+},
+{
+id:"b5",subject:"Pathology",exam:"NEET PG",year:2024,
+question:"The most common cause of nephrotic syndrome in adults is:",
+options:["Minimal change disease","Focal segmental glomerulosclerosis (FSGS)","Membranous nephropathy","Diabetic nephropathy"],
+correct:2,
+explanation:{
+short:"Membranous nephropathy is the most common cause of primary nephrotic syndrome in adults.",
+detail:"In adults, membranous nephropathy accounts for ~30% of primary nephrotic syndrome. FSGS is second most common (~25%). However, if including secondary causes, diabetic nephropathy is the most common overall cause of nephrotic syndrome globally. In children, minimal change disease is most common (75-80%).",
+ref:"Robbins & Cotran, 10th Ed: 'Membranous nephropathy is the most common cause of primary nephrotic syndrome in adults.'",
+wrong:["Minimal change disease is the most common cause in CHILDREN, not adults.","FSGS is the second most common primary cause in adults.","Diabetic nephropathy is the most common SECONDARY cause overall, but the question asks about primary causes."],
+examiner:"Tests classification knowledge of glomerular diseases by age group.",
+differentiator:"Key distinction: Children → MCD. Adults → Membranous. Elderly/diabetes → Diabetic nephropathy.",
+mnemonic:"'Adults have Membranes, Children have Minimal change'"
+}
+},
+{
+id:"b6",subject:"Pathology",exam:"NEET PG",year:2023,
+question:"Reed-Sternberg cells are characteristic of:",
+options:["Non-Hodgkin lymphoma","Hodgkin lymphoma","Multiple myeloma","Chronic lymphocytic leukemia"],
+correct:1,
+explanation:{
+short:"Reed-Sternberg cells are the hallmark of Hodgkin lymphoma — large binucleated cells with 'owl eye' appearance.",
+detail:"Reed-Sternberg (RS) cells are large, binucleated or multinucleated cells with prominent nucleoli giving an 'owl's eye' appearance. They are CD15+ and CD30+. RS cells are derived from germinal center B cells. Classic Hodgkin lymphoma has four subtypes: nodular sclerosis (most common), mixed cellularity, lymphocyte-rich, and lymphocyte-depleted.",
+ref:"Robbins & Cotran, 10th Ed: 'The Reed-Sternberg cell is the hallmark of Hodgkin lymphoma.'",
+wrong:["Non-Hodgkin lymphoma has various cell types but not Reed-Sternberg cells.","Multiple myeloma features plasma cells with 'clock-face' chromatin.","CLL features small mature lymphocytes with 'smudge cells.'"],
+examiner:"Tests the ability to associate characteristic histopathological findings with specific diseases.",
+differentiator:"RS cells = Hodgkin lymphoma. This is one of the most high-yield associations in pathology.",
+mnemonic:"'Reed-Sternberg = Hodgkin' — Both start with H-sounds (Sternberg-Hodgkin)"
+}
+},
+{
+id:"b7",subject:"Pharmacology",exam:"NEET PG",year:2024,
+question:"The mechanism of action of metformin in type 2 diabetes is:",
+options:["Stimulates insulin secretion from beta cells","Inhibits hepatic glucose production","Increases intestinal glucose absorption","Blocks insulin receptors"],
+correct:1,
+explanation:{
+short:"Metformin primarily inhibits hepatic glucose production (gluconeogenesis) by activating AMPK.",
+detail:"Metformin is a biguanide that: 1) Primarily inhibits hepatic glucose production via AMP-activated protein kinase (AMPK) activation, 2) Increases peripheral glucose uptake, 3) Decreases intestinal absorption of glucose. It does NOT stimulate insulin secretion (not a secretagogue). It is the first-line drug for T2DM.",
+ref:"Katzung, 15th Ed: 'Metformin's primary mechanism is reduction of hepatic glucose production through activation of AMPK.'",
+wrong:["Sulfonylureas (glimepiride, gliclazide) stimulate insulin secretion.","Metformin DECREASES intestinal glucose absorption, not increases.","Metformin does not block insulin receptors — that would cause insulin resistance."],
+examiner:"Tests pharmacological mechanism of the most commonly used antidiabetic drug.",
+differentiator:"Metformin is NOT a secretagogue — it works on the liver, not the pancreas. This is why it doesn't cause hypoglycemia when used alone.",
+mnemonic:"'Metformin = Liver suppressor' — Suppresses liver's glucose factory"
+}
+},
+{
+id:"b8",subject:"Pharmacology",exam:"NEET PG",year:2023,
+question:"Which of the following is a selective beta-1 blocker?",
+options:["Propranolol","Atenolol","Carvedilol","Labetalol"],
+correct:1,
+explanation:{
+short:"Atenolol is a cardioselective (beta-1 selective) blocker, making it safer in patients with asthma/COPD.",
+detail:"Beta-1 selective blockers: Atenolol, Metoprolol, Bisoprolol, Esmolol, Nebivolol. Non-selective (beta-1 + beta-2): Propranolol, Nadolol, Timolol. Alpha + beta blockers: Carvedilol (α1+β), Labetalol (α1+β). Cardioselective blockers are preferred in patients with reactive airway disease.",
+ref:"Katzung, 15th Ed: 'Atenolol and metoprolol are relatively selective for β1 receptors and are less likely to cause bronchospasm.'",
+wrong:["Propranolol is non-selective (blocks both β1 and β2).","Carvedilol blocks α1, β1, and β2 receptors.","Labetalol blocks α1, β1, and β2 receptors."],
+examiner:"Tests classification of beta-blockers — a high-yield pharmacology topic.",
+differentiator:"Beta-1 selective = 'Cardioselective' = safer in asthma. Remember: 'A BEAM' — Atenolol, Bisoprolol, Esmolol, Acebutolol, Metoprolol.",
+mnemonic:"'A BEAM of β1 selectivity' — Atenolol, Bisoprolol, Esmolol, Acebutolol, Metoprolol"
+}
+},
+{
+id:"b9",subject:"Microbiology",exam:"NEET PG",year:2024,
+question:"The most common cause of community-acquired pneumonia is:",
+options:["Staphylococcus aureus","Klebsiella pneumoniae","Streptococcus pneumoniae","Mycoplasma pneumoniae"],
+correct:2,
+explanation:{
+short:"Streptococcus pneumoniae is the most common cause of community-acquired pneumonia (CAP) worldwide.",
+detail:"S. pneumoniae accounts for 30-50% of CAP cases. It is a Gram-positive diplococcus, lancet-shaped, alpha-hemolytic, optochin-sensitive, bile-soluble. Vaccination with PCV13 and PPSV23 is recommended for high-risk groups. Typical presentation: sudden onset high fever, rusty sputum, lobar consolidation.",
+ref:"Harrison's, 21st Ed: 'Streptococcus pneumoniae remains the most commonly identified cause of community-acquired pneumonia.'",
+wrong:["Staphylococcus aureus is a common cause of post-influenza pneumonia and hospital-acquired pneumonia.","Klebsiella pneumoniae causes pneumonia in alcoholics with 'currant jelly' sputum.","Mycoplasma pneumoniae is the most common 'atypical' pathogen but not overall."],
+examiner:"Tests knowledge of microbial etiology of common infections.",
+differentiator:"S. pneumoniae = #1 CAP. This is one of the most tested facts in microbiology. Know the vaccine types too.",
+mnemonic:"'Streptococcus pneumoniae = #1 Community player'"
+}
+},
+{
+id:"b10",subject:"Microbiology",exam:"NEET PG",year:2023,
+question:"Which test is used for screening of HIV infection?",
+options:["Western blot","ELISA","PCR","CD4 count"],
+correct:1,
+explanation:{
+short:"ELISA (Enzyme-Linked Immunosorbent Assay) is the standard screening test for HIV infection.",
+detail:"HIV testing algorithm: 1) Screening: ELISA (4th generation Ag/Ab combo test detects p24 antigen + antibodies), 2) If reactive: Confirmatory Western blot or HIV-1/2 differentiation assay, 3) If indeterminate: HIV PCR (RNA viral load). CD4 count is used for staging, not diagnosis.",
+ref:"CDC Guidelines: 'Fourth-generation HIV tests (Ag/Ab combination) are recommended for screening. Reactive results should be confirmed with a supplemental test (Western blot or HIV-1/HIV-2 antibody differentiation immunoassay).'",
+wrong:["Western blot is the CONFIRMATORY test, not the screening test.","PCR is used when screening is indeterminate or in neonates.","CD4 count is used for disease staging and monitoring treatment response."],
+examiner:"Tests knowledge of HIV diagnostic algorithm — a frequently tested topic.",
+differentiator:"Screen = ELISA. Confirm = Western blot. The order matters! This is a classic exam question.",
+mnemonic:"'Screen with ELISA, Confirm with Western' — S comes before W in alphabet"
+}
+},
+{
+id:"b11",subject:"Medicine",exam:"NEET PG",year:2024,
+question:"The most common cause of hyperthyroidism is:",
+options:["Toxic multinodular goiter","Graves' disease","Toxic adenoma","Thyroiditis"],
+correct:1,
+explanation:{
+short:"Graves' disease is the most common cause of hyperthyroidism (60-80% of cases).",
+detail:"Graves' disease is an autoimmune condition caused by thyroid-stimulating immunoglobulins (TSI) that activate TSH receptors. Features: diffuse goiter, exophthalmos, pretibial myxedema, thyrotoxicosis. It is more common in women (5-10:1 ratio). Diagnosis: elevated free T4, suppressed TSH, positive TSH receptor antibodies (TRAb).",
+ref:"Harrison's, 21st Ed: 'Graves disease is the most common cause of hyperthyroidism, accounting for 60-80% of cases.'",
+wrong:["Toxic multinodular goiter is the second most common cause, especially in elderly.","Toxic adenoma (Plummer's disease) is a solitary hyperfunctioning nodule.","Thyroiditis causes transient thyrotoxicosis, not sustained hyperthyroidism."],
+examiner:"Tests knowledge of thyroid disorder etiology — a core medicine topic.",
+differentiator:"Graves' = autoimmune + diffuse goiter + exophthalmos. Other causes lack the eye signs.",
+mnemonic:"'Graves = #1 G' — Graves is the Greatest (most common) cause"
+}
+},
+{
+id:"b12",subject:"Medicine",exam:"NEET PG",year:2023,
+question:"Which of the following is the gold standard investigation for diagnosis of pulmonary embolism?",
+options:["D-dimer","Chest X-ray","CT Pulmonary Angiography (CTPA)","V/Q scan"],
+correct:2,
+explanation:{
+short:"CT Pulmonary Angiography (CTPA) is the gold standard for diagnosing pulmonary embolism.",
+detail:"CTPA has >95% sensitivity and specificity for PE. D-dimer is sensitive but not specific (useful to RULE OUT PE if low clinical probability). V/Q scan is used when CTPA is contraindicated (contrast allergy, renal failure). Chest X-ray is usually normal or shows Hampton's hump, Westermark sign, or Fleischner sign.",
+ref:"ESC Guidelines 2019: 'CT pulmonary angiography (CTPA) is recommended as the first-line imaging test for the diagnosis of PE.'",
+wrong:["D-dimer is a screening test with high sensitivity but low specificity — used to rule out PE, not confirm it.","Chest X-ray is often normal in PE and is not diagnostic.","V/Q scan is an alternative when CTPA cannot be done, not the gold standard."],
+examiner:"Tests knowledge of diagnostic approach to pulmonary embolism.",
+differentiator:"CTPA = Gold standard. D-dimer = Rule out. V/Q = Alternative. Know the algorithm.",
+mnemonic:"'CT is king for PE' — CT Pulmonary Angiography is the definitive test"
+}
+},
+{
+id:"b13",subject:"Surgery",exam:"NEET PG",year:2024,
+question:"The most common cause of acute appendicitis is:",
+options:["Fecalith obstruction","Lymphoid hyperplasia","Tumor","Parasitic infection"],
+correct:1,
+explanation:{
+short:"Lymphoid hyperplasia is the most common cause of appendicitis, especially in children and young adults.",
+detail:"Causes of appendiceal obstruction: 1) Lymphoid hyperplasia (most common overall, especially <30 years), 2) Fecalith/fecalith (most common in elderly), 3) Tumors (carcinoid is most common appendiceal tumor), 4) Parasites (Enterobius vermicularis). The obstruction leads to bacterial overgrowth, distension, ischemia, and eventually perforation.",
+ref:"Sabiston, 21st Ed: 'Lymphoid hyperplasia is the most common cause of appendiceal obstruction, particularly in children and young adults.'",
+wrong:["Fecalith is more common in the elderly as a cause of appendicitis.","Tumors are rare causes of appendicitis but carcinoid is the most common appendiceal tumor.","Parasitic infection is an uncommon cause of appendicitis."],
+examiner:"Tests knowledge of appendicitis etiology with age-specific considerations.",
+differentiator:"Young patients → lymphoid hyperplasia. Elderly → fecalith. This age distinction is important for exams.",
+mnemonic:"'Lymphoid in the young, Fecal in the old'"
+}
+},
+{
+id:"b14",subject:"Surgery",exam:"NEET PG",year:2023,
+question:"The most common site of peptic ulcer is:",
+options:["Body of stomach","Greater curvature","First part of duodenum","Pyloric antrum"],
+correct:2,
+explanation:{
+short:"The first part of the duodenum (D1, anterior wall) is the most common site of peptic ulcers.",
+detail:"Duodenal ulcers (DU) are 4x more common than gastric ulcers (GU). DU: most common on anterior wall of D1 (risk of perforation) or posterior wall (risk of bleeding from gastroduodenal artery). GU: most common on lesser curvature of stomach. The most common complication of DU is perforation; for GU it's bleeding.",
+ref:"Bailey & Love, 28th Ed: 'Duodenal ulcers are four times more common than gastric ulcers, and occur most frequently on the anterior wall of the first part of the duodenum.'",
+wrong:["Body of stomach is not the most common site for peptic ulcers.","Greater curvature is an uncommon site; ulcers here should raise suspicion of malignancy.","Pyloric antrum can be involved but is not the most common site overall."],
+examiner:"Tests anatomical knowledge of peptic ulcer disease — a core surgery topic.",
+differentiator:"DU > GU (4:1). Anterior D1 → perforation. Posterior D1 → bleeding (GDA erosion).",
+mnemonic:"'D1 is #1' — First part of Duodenum is the most common site"
+}
+},
+{
+id:"b15",subject:"OBG",exam:"NEET PG",year:2024,
+question:"The most common cause of postpartum hemorrhage is:",
+options:["Retained placenta","Uterine atony","Genital tract trauma","Coagulopathy"],
+correct:1,
+explanation:{
+short:"Uterine atony accounts for ~80% of postpartum hemorrhage (PPH) cases.",
+detail:"PPH is blood loss ≥500mL after vaginal delivery or ≥1000mL after cesarean section. The 4 'T's of PPH: Tone (atony, 70-80%), Trauma (genital tract lacerations, 20%), Tissue (retained products, 10%), Thrombin (coagulopathy, 1%). Management of atony: uterotonics (oxytocin, misoprostol, methylergometrine), bimanual compression, balloon tamponade, B-Lynch suture.",
+ref:"Williams Obstetrics, 26th Ed: 'Uterine atony is the most common cause of PPH, accounting for approximately 80% of cases.'",
+wrong:["Retained placenta is the third most common cause of PPH.","Genital tract trauma is the second most common cause (~20%).","Coagulopathy is the least common cause (~1%)."],
+examiner:"Tests knowledge of the most common obstetric emergency and its etiology.",
+differentiator:"Remember the 4 T's in order: Tone, Trauma, Tissue, Thrombin. Tone (atony) is #1.",
+mnemonic:"'4 T's: Tone is Top' — Uterine atony is the most common cause"
+}
+},
+{
+id:"b16",subject:"OBG",exam:"NEET PG",year:2023,
+question:"Which of the following is the most reliable sign of pregnancy?",
+options:["Amenorrhea","Quickening","Fetal heart sounds by Doppler","Hegar's sign"],
+correct:2,
+explanation:{
+short:"Fetal heart sounds heard by Doppler (at 10-12 weeks) is a positive/positive sign of pregnancy.",
+detail:"Signs of pregnancy are classified as: Presumptive (subjective): amenorrhea, nausea, breast changes, quickening. Probable (objective): Chadwick's sign, Hegar's sign, positive pregnancy test, uterine enlargement. Positive (diagnostic): fetal heart sounds, ultrasound visualization of fetus, fetal movements palpated by examiner.",
+ref:"Williams Obstetrics, 26th Ed: 'The detection of fetal heart activity by Doppler (10-12 weeks) or ultrasound (6 weeks) constitutes positive proof of pregnancy.'",
+wrong:["Amenorrhea is a presumptive sign — it can have many other causes.","Quickening (feeling fetal movement) is a presumptive sign, first felt at 18-20 weeks in primigravida.","Hegar's sign (softening of lower uterine segment) is a probable sign, not diagnostic."],
+examiner:"Tests classification of pregnancy signs — a fundamental obstetrics concept.",
+differentiator:"Positive signs = undeniably prove pregnancy. Only 3: FHS, USG fetus, fetal parts palpated by examiner.",
+mnemonic:"'Positive = Proof' — Fetal heart sounds prove pregnancy"
+}
+},
+{
+id:"b17",subject:"Pediatrics",exam:"NEET PG",year:2024,
+question:"The most common congenital heart disease is:",
+options:["Tetralogy of Fallot","Ventricular septal defect (VSD)","Atrial septal defect (ASD)","Patent ductus arteriosus (PDA)"],
+correct:1,
+explanation:{
+short:"Ventricular septal defect (VSD) is the most common congenital heart disease overall (30% of all CHD).",
+detail:"VSD accounts for ~30% of all congenital heart defects. Most common location: membranous septum (70%). Most VSDs close spontaneously by age 5. Complications: Eisenmenger syndrome (reversal of shunt due to pulmonary hypertension), heart failure, infective endocarditis. The most common acyanotic CHD is VSD; the most common cyanotic CHD is Tetralogy of Fallot.",
+ref:"Nelson's Pediatrics, 21st Ed: 'VSD is the most common congenital cardiac anomaly, representing approximately 30% of all CHD.'",
+wrong:["TOF is the most common CYANOTIC CHD, not overall.","ASD is the second most common CHD (~10%).","PDA is more common in premature infants but not overall the most common CHD."],
+examiner:"Tests knowledge of CHD prevalence — a high-yield pediatrics topic.",
+differentiator:"Overall most common CHD = VSD. Most common cyanotic CHD = TOF. Most common acyanotic CHD = VSD.",
+mnemonic:"'VSD = Very common, Standard Defect'"
+}
+},
+{
+id:"b18",subject:"Pediatrics",exam:"NEET PG",year:2023,
+question:"The vaccine contraindicated in a child with severe combined immunodeficiency (SCID) is:",
+options:["Hepatitis B","OPV","DPT","Hib"],
+correct:1,
+explanation:{
+short:"OPV (Oral Polio Vaccine) contains live attenuated virus and is contraindicated in immunocompromised patients including SCID.",
+detail:"Live vaccines contraindicated in immunodeficiency: OPV, BCG, MMR, Varicella, Rotavirus, Yellow fever. In SCID patients, OPV can cause vaccine-associated paralytic poliomyelitis (VAPP). IPV (inactivated polio vaccine) should be used instead. BCG is also contraindicated and can cause disseminated BCGosis.",
+ref:"IAP Guidelines 2023: 'Live vaccines (OPV, BCG, MMR, Varicella) are contraindicated in children with primary immunodeficiency disorders including SCID.'",
+wrong:["Hepatitis B is an inactivated/subunit vaccine — safe in immunodeficiency.","DPT contains inactivated pertussis and toxoids — safe in immunodeficiency.","Hib is a conjugate vaccine — safe in immunodeficiency."],
+examiner:"Tests knowledge of vaccine types and contraindications in immunocompromised patients.",
+differentiator:"Live vaccines = danger in immunodeficiency. Inactivated vaccines = safe. Know which vaccines are live vs inactivated.",
+mnemonic:"'Live vaccines are Lethal in Low immunity'"
+}
+},
+{
+id:"b19",subject:"PSM",exam:"NEET PG",year:2024,
+question:"The basic reproduction number (R0) of a disease indicates:",
+options:["The number of deaths caused by the disease","The average number of secondary cases produced by one infected person in a fully susceptible population","The case fatality rate","The incubation period of the disease"],
+correct:1,
+explanation:{
+short:"R0 (R-naught) is the average number of secondary infections produced by a single infected individual in a completely susceptible population.",
+detail:"R0 is a key epidemiological parameter: If R0 > 1: epidemic can spread. If R0 = 1: endemic (stable). If R0 < 1: disease will die out. R0 values: Measles: 12-18, COVID-19 (original): 2-3, Smallpox: 5-7, Influenza: 1.5-2. Herd immunity threshold = 1 - (1/R0).",
+ref:"Park's PSM, 27th Ed: 'The basic reproduction number (R0) represents the average number of new infections generated by one infected individual in a fully susceptible population.'",
+wrong:["R0 does not measure mortality — that's the case fatality rate (CFR).","The case fatality rate is deaths/cases × 100.","The incubation period is the time from exposure to symptom onset."],
+examiner:"Tests understanding of basic epidemiological concepts — fundamental for PSM.",
+differentiator:"R0 measures transmissibility, not severity. High R0 = highly contagious (measles). High CFR = highly fatal (Ebola).",
+mnemonic:"'R0 = Reproduction in Naive (susceptible) population'"
+}
+},
+{
+id:"b20",subject:"PSM",exam:"NEET PG",year:2023,
+question:"Which of the following is a 'sentinel health event'?",
+options:["A disease outbreak in a community","A preventable disease, death, or disability that signals the need for corrective action","A newly emerging infectious disease","A disease occurring in a healthcare worker"],
+correct:1,
+explanation:{
+short:"A sentinel health event (SHE) is a preventable disease, disability, or untimely death that signals the need for corrective action in the health system.",
+detail:"Sentinel Health Events (SHE) were described by Rutstein in 1976. They serve as warning signals for deficiencies in healthcare. Examples: maternal death from eclampsia (indicates inadequate prenatal care), death from measles (indicates vaccination failure), neonatal tetanus (indicates poor delivery practices). SHEA (Sentinel Health Event – Avoidable) specifically refers to events that should not occur with proper care.",
+ref:"Park's PSM, 27th Ed: 'Sentinel health events are preventable diseases, deaths, or disabilities that serve as warning signals for need for corrective action.'",
+wrong:["A disease outbreak is an epidemic event, not specifically a sentinel event.","Newly emerging diseases are public health threats but not sentinel events in the technical sense.","Disease in healthcare workers is an occupational hazard, not a sentinel event."],
+examiner:"Tests understanding of epidemiological concepts and health indicators.",
+differentiator:"Sentinel = warning signal. It indicates a PROBLEM in the healthcare system that needs fixing.",
+mnemonic:"'Sentinel = Sentry = Watchman' — It watches for problems in the health system"
+}
+}
+];
+
+// ===================== CONSTANTS =====================
+const THOUGHTS = [
+{ text:"The good physician treats the disease; the great physician treats the patient who has the disease.", author:"— William Osler" },
+{ text:"Cure sometimes, treat often, comfort always.", author:"— Hippocrates" },
+{ text:"The art of medicine consists of amusing the patient while nature cures the disease.", author:"— Voltaire" },
+{ text:"It is more important to know what sort of person has a disease than to know what sort of disease a person has.", author:"— Hippocrates" },
+{ text:"The best doctor gives the least medicines.", author:"— Benjamin Franklin" },
+{ text:"Wherever the art of medicine is loved, there is also a love of humanity.", author:"— Hippocrates" },
+{ text:"A physician who treats himself has a fool for a patient.", author:"— William Osler" },
+{ text:"To do nothing is also a good remedy.", author:"— Hippocrates" },
+{ text:"Medicine is a science of uncertainty and an art of probability.", author:"— William Osler" },
+{ text:"The physician's highest calling is to be a teacher — to educate patients about health and disease.", author:"— Abraham Verghese" },
+{ text:"Let your food be your medicine and your medicine be your food.", author:"— Hippocrates" },
+{ text:"In preparing for battle, I have always found that plans are useless, but planning is indispensable.", author:"— Dwight D. Eisenhower (applied to clinical thinking)" },
+{ text:"The human body is the best picture of the human soul.", author:"— Ludwig Wittgenstein" },
+{ text:"He who has health has hope; and he who has hope has everything.", author:"— Thomas Carlyle" }
+];
+
+const TOPICS = [
+{ title:"Cardiovascular System", desc:"Focus on cardiac physiology, ECG interpretation, and common cardiac conditions today." },
+{ title:"Respiratory System", desc:"Review lung physiology, ventilation-perfusion, and obstructive vs restrictive diseases." },
+{ title:"Gastrointestinal System", desc:"Study GI motility, absorption, liver function, and common GI disorders." },
+{ title:"Renal System", desc:"Master nephron physiology, acid-base balance, and renal pathology." },
+{ title:"Neuroanatomy & Neurophysiology", desc:"Dive into CNS pathways, cranial nerves, and neurological examination." },
+{ title:"Endocrine System", desc:"Review hormone pathways, feedback mechanisms, and endocrine disorders." },
+{ title:"Pharmacology Essentials", desc:"Focus on drug mechanisms, side effects, and high-yield drug interactions." },
+{ title:"Pathology Fundamentals", desc:"Study inflammation, neoplasia, and organ-specific pathology patterns." }
+];
+
+// ===================== STATE =====================
+let DB = null;
+let allQuestions = [...BUILTIN_QUESTIONS];
+let settings = { showExplanations: true };
+let quizState = null;
+let ankiReviewState = null;
+let progressData = {}; // { questionId: { attempted, correct } }
+
+// ===================== INDEXEDDB =====================
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('MedQuizDB', 3);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('ankiCards')) {
+        db.createObjectStore('ankiCards', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('progress')) {
+        db.createObjectStore('progress', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings', { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains('importedQuestions')) {
+        db.createObjectStore('importedQuestions', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = (e) => { DB = e.target.result; resolve(DB); };
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function dbPut(store, data) {
+  return new Promise((resolve, reject) => {
+    const tx = DB.transaction(store, 'readwrite');
+    tx.objectStore(store).put(data);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+function dbGet(store, key) {
+  return new Promise((resolve, reject) => {
+    const tx = DB.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function dbGetAll(store) {
+  return new Promise((resolve, reject) => {
+    const tx = DB.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+function dbDelete(store, key) {
+  return new Promise((resolve, reject) => {
+    const tx = DB.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+function dbClear(store) {
+  return new Promise((resolve, reject) => {
+    const tx = DB.transaction(store, 'readwrite');
+    tx.objectStore(store).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e);
+  });
+}
+
+// ===================== NAVIGATION =====================
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+  const idx = { home: 0, pyq: 1, cereb: 2, anki: 3, settings: 4 }[name];
+  document.querySelectorAll('.toolbar button')[idx].classList.add('active');
+  if (name === 'home') renderHome();
+  if (name === 'pyq') renderPYQ();
+  if (name === 'cereb') renderCereb();
+  if (name === 'anki') renderAnki();
+}
+
+// ===================== HOME PAGE =====================
+function renderHome() {
+  // Thought of the day
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const thought = THOUGHTS[dayOfYear % THOUGHTS.length];
+  document.getElementById('thought-text').textContent = '"' + thought.text + '"';
+  document.getElementById('thought-author').textContent = thought.author;
+
+  // Topic of the day
+  const topic = TOPICS[dayOfYear % TOPICS.length];
+  document.getElementById('topic-title').textContent = topic.title;
+  document.getElementById('topic-desc').textContent = topic.desc;
+
+  // Stats
+  const subjects = getSubjects();
+  let total = allQuestions.length;
+  let attempted = 0;
+  let correct = 0;
+  for (const q of allQuestions) {
+    const p = progressData[q.id];
+    if (p && p.attempted) { attempted++; if (p.correct) correct++; }
+  }
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-attempted').textContent = attempted;
+  document.getElementById('stat-accuracy').textContent = attempted ? Math.round(correct / attempted * 100) + '%' : '0%';
+
+  // Subject cards
+  const grid = document.getElementById('subject-grid');
+  grid.innerHTML = '';
+  for (const subj of subjects) {
+    const qs = allQuestions.filter(q => q.subject === subj);
+    const subAttempted = qs.filter(q => progressData[q.id] && progressData[q.id].attempted).length;
+    const pct = qs.length ? Math.round(subAttempted / qs.length * 100) : 0;
+    const card = document.createElement('div');
+    card.className = 'subject-card';
+    card.innerHTML = `<div class="sc-name">${subj}</div><div class="sc-count">${subAttempted}/${qs.length} attempted</div><div class="progress-bar"><div class="fill" style="width:${pct}%"></div></div>`;
+    card.onclick = () => startQuiz(subj);
+    grid.appendChild(card);
+  }
+}
+
+function getSubjects() {
+  const set = new Set(allQuestions.map(q => q.subject));
+  return [...set].sort();
+}
+
+// ===================== PYQ PAGE =====================
+function renderPYQ(filter = '') {
+  const list = document.getElementById('pyq-list');
+  list.innerHTML = '';
+  const exams = {};
+  for (const q of allQuestions) {
+    const key = q.exam || 'Miscellaneous';
+    if (!exams[key]) exams[key] = [];
+    if (filter && !q.question.toLowerCase().includes(filter.toLowerCase()) && !q.subject.toLowerCase().includes(filter.toLowerCase())) continue;
+    exams[key].push(q);
+  }
+  for (const [exam, qs] of Object.entries(exams)) {
+    if (qs.length === 0) continue;
+    const section = document.createElement('div');
+    section.className = 'exam-section';
+    section.innerHTML = `<div class="exam-header">${exam} (${qs.length})</div>`;
+    for (const q of qs) {
+      const item = document.createElement('div');
+      item.className = 'pyq-item';
+      item.innerHTML = `<div class="pq-subject">${q.subject}</div><div class="pq-q">${q.question}</div><div class="pq-meta">${q.year || ''}</div>`;
+      item.onclick = () => showPYQDetail(q);
+      section.appendChild(item);
+    }
+    list.appendChild(section);
+  }
+  if (list.children.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="es-icon">🔍</div><div class="es-text">No questions found</div></div>';
+  }
+}
+
+function showPYQDetail(q) {
+  const overlay = document.getElementById('quiz-overlay');
+  overlay.classList.add('show');
+  document.getElementById('quiz-title').textContent = q.subject;
+  document.getElementById('quiz-nav').style.display = 'none';
+  const body = document.getElementById('quiz-body');
+  body.innerHTML = `
+    <div class="q-text">${q.question}</div>
+    <div class="q-options">${q.options.map((o, i) => `<div class="q-opt ${i === q.correct ? 'correct' : ''} disabled">${String.fromCharCode(65 + i)}) ${o}</div>`).join('')}</div>
+    <div class="q-explanation show" style="margin-top:16px">
+      ${renderExplanation(q.explanation)}
+    </div>`;
+}
+
+function renderExplanation(exp) {
+  if (!exp) return '';
+  let html = '<div class="exp-title">Explanation</div>';
+  if (exp.short) html += `<div class="exp-section exp-short"><div class="exp-label">✅ Short Answer</div><div>${exp.short}</div></div>`;
+  if (exp.detail) html += `<div class="exp-section exp-detail"><div class="exp-label">📖 Detailed Explanation</div><div>${exp.detail}</div></div>`;
+  if (exp.ref) html += `<div class="exp-section exp-ref"><div class="exp-label">📚 Reference</div><div>${exp.ref}</div></div>`;
+  if (exp.wrong && exp.wrong.length) {
+    html += '<div class="exp-section exp-wrong"><div class="exp-label">❌ Why Other Options Are Wrong</div>';
+    exp.wrong.forEach(w => { html += `<div style="margin-bottom:4px">• ${w}</div>`; });
+    html += '</div>';
+  }
+  if (exp.examiner) html += `<div class="exp-section exp-examiner"><div class="exp-label">🎯 What the Examiner Wants</div><div>${exp.examiner}</div></div>`;
+  if (exp.differentiator) html += `<div class="exp-section exp-diff"><div class="exp-label">🔑 Key Differentiator</div><div>${exp.differentiator}</div></div>`;
+  if (exp.mnemonic) html += `<div class="exp-section exp-mnemonic"><div class="exp-label">🧠 Mnemonic</div><div>${exp.mnemonic}</div></div>`;
+  if (exp.algo) html += `<div class="exp-section exp-algo"><div class="exp-label">📊 Algorithm</div><div>${exp.algo}</div></div>`;
+  return html;
+}
+
+document.getElementById('pyq-search').addEventListener('input', (e) => renderPYQ(e.target.value));
+
+// ===================== CEREB PAGE (lazy-loaded question bank) =====================
+let cerebManifest = null;
+let cerebSubjectCache = {}; // subjectFile -> questions array (cached after first fetch)
+
+async function loadCerebManifest() {
+  if (cerebManifest) return cerebManifest;
+  try {
+    const res = await fetch('cereb/manifest.json');
+    cerebManifest = await res.json();
+    return cerebManifest;
+  } catch (err) {
+    console.warn('Relative CEREB manifest fetch failed, trying absolute asset fallback...', err);
+    try {
+      const res = await fetch('file:///android_asset/cereb/manifest.json');
+      cerebManifest = await res.json();
+      return cerebManifest;
+    } catch (err2) {
+      console.error('All manifest fetch methods failed:', err2);
+      throw err2;
+    }
+  }
+}
+
+async function renderCereb() {
+  document.getElementById('cereb-subtopic-view').style.display = 'none';
+  document.getElementById('cereb-subject-view').style.display = '';
+  document.getElementById('cereb-title').textContent = 'Cerebellum';
+  const grid = document.getElementById('cereb-subject-grid');
+  grid.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div class="es-text">Loading subjects...</div></div>';
+  try {
+    const manifest = await loadCerebManifest();
+    grid.innerHTML = '';
+    for (const subj of manifest.subjects) {
+      const card = document.createElement('div');
+      card.className = 'subject-card';
+      card.innerHTML = `<div class="sc-name">${subj.name}</div><div class="sc-count">${subj.total} questions</div>`;
+      card.onclick = () => openCerebSubject(subj);
+      grid.appendChild(card);
+    }
+  } catch (e) {
+    grid.innerHTML = '<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-text">Could not load CEREB question bank.</div></div>';
+  }
+}
+
+function openCerebSubject(subj) {
+  document.getElementById('cereb-subject-view').style.display = 'none';
+  document.getElementById('cereb-subtopic-view').style.display = '';
+  document.getElementById('cereb-title').textContent = subj.name;
+  const list = document.getElementById('cereb-subtopic-list');
+  list.innerHTML = '';
+
+  const allBtn = document.createElement('div');
+  allBtn.className = 'pyq-item';
+  allBtn.innerHTML = `<div class="pq-subject">All Subtopics</div><div class="pq-q">Quiz all ${subj.total} questions in ${subj.name}</div>`;
+  allBtn.onclick = () => openCerebSubtopic(subj, null);
+  list.appendChild(allBtn);
+
+  for (const st of subj.subtopics) {
+    const item = document.createElement('div');
+    item.className = 'pyq-item';
+    item.innerHTML = `<div class="pq-subject">${st.name}</div><div class="pq-q">${st.count} questions</div>`;
+    item.onclick = () => openCerebSubtopic(subj, st.name);
+    list.appendChild(item);
+  }
+}
+
+function cerebBackToSubjects() {
+  document.getElementById('cereb-subtopic-view').style.display = 'none';
+  document.getElementById('cereb-subject-view').style.display = '';
+  document.getElementById('cereb-title').textContent = 'Cerebellum';
+}
+
+async function openCerebSubtopic(subj, subtopicName) {
+  showToast('Loading questions...');
+  let questions = cerebSubjectCache[subj.file];
+  if (!questions) {
+    try {
+      const res = await fetch(subj.file);
+      if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+      const text = await res.text();
+      if (!text || text.trim() === '') throw new Error('File is empty');
+      questions = JSON.parse(text);
+    } catch (err) {
+      console.warn('Relative subject fetch failed, trying absolute asset fallback...', err);
+      try {
+        const res = await fetch('file:///android_asset/' + subj.file);
+        if (!res.ok) throw new Error(`HTTP status ${res.status}`);
+        const text = await res.text();
+        if (!text || text.trim() === '') throw new Error('File is empty');
+        questions = JSON.parse(text);
+      } catch (err2) {
+        console.error('All subject fetch methods failed:', err2);
+        showToast('⚠️ Subject data is not available or empty');
+        return;
+      }
+    }
+    cerebSubjectCache[subj.file] = questions;
+  }
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    showToast('⚠️ No questions found in this subject');
+    return;
+  }
+  const filtered = subtopicName ? questions.filter(q => q.subtopic === subtopicName) : questions;
+  startQuizWithList(filtered, subtopicName ? `${subj.name} — ${subtopicName}` : subj.name);
+}
+
+// ===================== QUIZ MODE =====================
+function startQuiz(subject) {
+  const qs = allQuestions.filter(q => q.subject === subject);
+  startQuizWithList(qs, subject);
+}
+
+function startQuizWithList(qs, title) {
+  if (!qs || qs.length === 0) { showToast('No questions here'); return; }
+  quizState = {
+    subject: title,
+    questions: qs,
+    current: 0,
+    answers: {},
+    revealed: false
+  };
+  const overlay = document.getElementById('quiz-overlay');
+  overlay.classList.add('show');
+  document.getElementById('quiz-title').textContent = title;
+  document.getElementById('quiz-nav').style.display = 'flex';
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  if (!quizState) return;
+  const { questions, current, answers } = quizState;
+  const q = questions[current];
+  const total = questions.length;
+  const pct = ((current + 1) / total * 100);
+
+  document.getElementById('quiz-progress-fill').style.width = pct + '%';
+  document.getElementById('btn-prev').style.display = current > 0 ? '' : 'none';
+  document.getElementById('btn-next').style.display = current < total - 1 ? '' : 'none';
+  document.getElementById('btn-submit').style.display = current === total - 1 ? '' : 'none';
+
+  const answered = answers[q.id] !== undefined;
+  const NAV_DOT_LIMIT = 150;
+  let navHtml;
+  if (total <= NAV_DOT_LIMIT) {
+    navHtml = `<div class="nav-dots">${questions.map((qq, i) => {
+      let cls = 'nav-dot';
+      if (i === current) cls += ' current';
+      const a = answers[qq.id];
+      if (a !== undefined) cls += a === qq.correct ? ' correct-dot' : ' wrong-dot';
+      return `<div class="${cls}" onclick="quizGoTo(${i})">${i + 1}</div>`;
+    }).join('')}</div>`;
+  } else {
+    navHtml = `<div class="nav-dots"><div style="font-size:13px;color:var(--text2)">Question ${current + 1} of ${total}</div></div>`;
+  }
+
+  const body = document.getElementById('quiz-body');
+  body.innerHTML = `
+    ${navHtml}
+    <div class="q-text" style="margin-top:12px">${q.question}</div>
+    <div class="q-options">${q.options.map((o, i) => {
+      let cls = 'q-opt';
+      if (answered) {
+        cls += ' disabled';
+        if (i === q.correct) cls += ' correct';
+        if (answers[q.id] === i && i !== q.correct) cls += ' wrong';
+      } else if (answers[q.id] === i) {
+        cls += ' selected';
+      }
+      return `<div class="${cls}" onclick="selectOption(${i})">${String.fromCharCode(65 + i)}) ${o}</div>`;
+    }).join('')}</div>
+    <div class="q-explanation ${answered && settings.showExplanations ? 'show' : ''}" id="q-explanation">
+      ${answered ? renderExplanation(q.explanation) : ''}
+    </div>`;
+}
+
+function selectOption(idx) {
+  if (!quizState) return;
+  const q = quizState.questions[quizState.current];
+  if (quizState.answers[q.id] !== undefined) return;
+  quizState.answers[q.id] = idx;
+  const correct = idx === q.correct;
+
+  // Save progress
+  progressData[q.id] = { attempted: true, correct };
+  dbPut('progress', { id: q.id, attempted: true, correct });
+
+  // Auto-create Anki card if wrong
+  if (!correct) {
+    createAnkiCard(q);
+  }
+
+  renderQuizQuestion();
+}
+
+function quizPrev() {
+  if (quizState && quizState.current > 0) { quizState.current--; renderQuizQuestion(); }
+}
+
+function quizNext() {
+  if (quizState && quizState.current < quizState.questions.length - 1) { quizState.current++; renderQuizQuestion(); }
+}
+
+function quizGoTo(idx) {
+  if (quizState) { quizState.current = idx; renderQuizQuestion(); }
+}
+
+function quizSubmit() {
+  if (!quizState) return;
+  const { questions, answers } = quizState;
+  let correct = 0, wrong = 0, unanswered = 0;
+  for (const q of questions) {
+    const a = answers[q.id];
+    if (a === undefined) unanswered++;
+    else if (a === q.correct) correct++;
+    else wrong++;
+  }
+  const pct = Math.round(correct / questions.length * 100);
+  const overlay = document.getElementById('results-overlay');
+  overlay.classList.add('show');
+  const circumference = 2 * Math.PI * 60;
+  const offset = circumference - (pct / 100) * circumference;
+  const color = pct >= 70 ? 'var(--green)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('results-content').innerHTML = `
+    <div class="ring-container">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <circle cx="80" cy="80" r="60" fill="none" stroke="var(--border)" stroke-width="10"/>
+        <circle cx="80" cy="80" r="60" fill="none" stroke="${color}" stroke-width="10" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
+      </svg>
+      <div class="ring-text" style="color:${color}">${pct}%</div>
+      <div class="ring-label">Score</div>
+    </div>
+    <div class="results-title">${pct >= 70 ? '🎉 Great Job!' : pct >= 40 ? '👍 Keep Going!' : '📚 Keep Studying!'}</div>
+    <div class="results-sub">${quizState.subject} — ${questions.length} questions</div>
+    <div class="results-stats">
+      <div class="rs-box"><div class="rs-val" style="color:var(--green)">${correct}</div><div class="rs-lbl">Correct</div></div>
+      <div class="rs-box"><div class="rs-val" style="color:var(--red)">${wrong}</div><div class="rs-lbl">Wrong</div></div>
+      <div class="rs-box"><div class="rs-val" style="color:var(--text2)">${unanswered}</div><div class="rs-lbl">Skipped</div></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="closeResults()">Done</button>`;
+}
+
+function closeQuiz() {
+  document.getElementById('quiz-overlay').classList.remove('show');
+  quizState = null;
+  renderHome();
+}
+
+function closeResults() {
+  document.getElementById('results-overlay').classList.remove('show');
+  document.getElementById('quiz-overlay').classList.remove('show');
+  quizState = null;
+  renderHome();
+}
+
+// ===================== ANKI SYSTEM (SM-2) =====================
+async function createAnkiCard(q) {
+  const existing = await dbGet('ankiCards', 'anki_' + q.id);
+  if (existing) return; // don't duplicate
+
+  // Create cloze deletion from explanation.short
+  let clozeText = q.explanation && q.explanation.short ? q.explanation.short : q.question;
+  const correctAnswer = q.options[q.correct];
+
+  // Simple cloze: replace the answer in the text with {{c1::answer}}
+  let cloze = clozeText;
+  if (cloze.includes(correctAnswer)) {
+    cloze = cloze.replace(correctAnswer, '{{c1::' + correctAnswer + '}}');
+  } else {
+    // If answer not in text, create a Q&A cloze
+    cloze = q.question + '<br><br>Answer: {{c1::' + correctAnswer + '}}';
+  }
+
+  const card = {
+    id: 'anki_' + q.id,
+    questionId: q.id,
+    subject: q.subject,
+    question: q.question,
+    clozeText: cloze,
+    fullAnswer: correctAnswer,
+    explanation: q.explanation ? q.explanation.short : '',
+    // SM-2 fields
+    easeFactor: 2.5,
+    interval: 0, // in minutes
+    due: Date.now(),
+    reps: 0,
+    lapses: 0,
+    status: 'new' // new, learning, review
+  };
+  await dbPut('ankiCards', card);
+  showToast('📇 Anki card created for: ' + q.question.substring(0, 40) + '...');
+}
+
+async function renderAnki() {
+  const cards = await dbGetAll('ankiCards');
+  const now = Date.now();
+  let newCount = 0, learningCount = 0, dueCount = 0;
+  for (const c of cards) {
+    if (c.status === 'new') newCount++;
+    else if (c.status === 'learning') learningCount++;
+    else if (c.due <= now) dueCount++;
+  }
+  document.getElementById('anki-new').textContent = newCount;
+  document.getElementById('anki-learning').textContent = learningCount;
+  document.getElementById('anki-due').textContent = dueCount;
+
+  // Streak
+  const streak = await calculateStreak();
+  document.getElementById('anki-streak').textContent = streak + ' days';
+
+  // Show/hide study button
+  const totalDue = newCount + learningCount + dueCount;
+  document.getElementById('btn-study').style.display = totalDue > 0 ? '' : 'none';
+  document.getElementById('anki-empty').style.display = totalDue === 0 ? '' : 'none';
+  document.getElementById('anki-review-area').style.display = 'none';
+  document.getElementById('anki-done').style.display = 'none';
+
+  // Render the D3 Study Progress Graph
+  const history = await dbGet('settings', 'ankiHistory');
+  renderAnkiChart(history);
+}
+
+async function recordAnkiStudyCount(count) {
+  if (count <= 0) return;
+  const today = new Date().toISOString().split('T')[0];
+  let history = await dbGet('settings', 'ankiHistory');
+  if (!history) history = { key: 'ankiHistory', dates: [], counts: {} };
+  if (!history.counts) history.counts = {};
+  
+  if (!history.dates.includes(today)) {
+    history.dates.push(today);
+  }
+  
+  // Clean dates that are older than 365 days
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 365);
+  history.dates = history.dates.filter(d => new Date(d) >= cutoff);
+  
+  // Keep counts in sync
+  const newCounts = {};
+  for (const d of history.dates) {
+    if (history.counts[d] !== undefined) {
+      newCounts[d] = history.counts[d];
+    }
+  }
+  history.counts = newCounts;
+  
+  history.counts[today] = (history.counts[today] || 0) + count;
+  await dbPut('settings', history);
+}
+
+function renderAnkiChart(history) {
+  const container = document.getElementById('anki-chart');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const width = container.clientWidth || 340;
+  const height = 130;
+  const margin = { top: 12, right: 12, bottom: 20, left: 30 };
+
+  // Generate last 7 days data
+  const data = [];
+  const counts = (history && history.counts) ? history.counts : {};
+  const dates = (history && history.dates) ? history.dates : [];
+
+  let totalStudiedWeek = 0;
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    // Fallback: if the date is logged in the history list but has no counts, count as 5 studied
+    const count = counts[dateStr] !== undefined ? counts[dateStr] : (dates.includes(dateStr) ? 5 : 0);
+    totalStudiedWeek += count;
+    
+    // Format label (e.g. Mon, Tue)
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    data.push({ date: dateStr, label: dayName, count: count });
+  }
+
+  document.getElementById('anki-total-studied-week').textContent = `${totalStudiedWeek} studied this week`;
+
+  if (typeof d3 === 'undefined') {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text3)">D3 library loading...</div>';
+    return;
+  }
+
+  const svg = d3.select('#anki-chart')
+    .append('svg')
+    .attr('width', '100%')
+    .attr('height', height)
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('preserveAspectRatio', 'xMinYMin meet');
+
+  const x = d3.scaleBand()
+    .range([margin.left, width - margin.right])
+    .domain(data.map(d => d.label))
+    .padding(0.32);
+
+  const maxVal = d3.max(data, d => d.count) || 5;
+  const y = d3.scaleLinear()
+    .range([height - margin.bottom, margin.top])
+    .domain([0, Math.ceil(maxVal * 1.15)]);
+
+  // Gridlines for Y axis
+  svg.append('g')
+    .attr('class', 'grid')
+    .attr('transform', `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y)
+      .ticks(4)
+      .tickSize(-width + margin.left + margin.right)
+      .tickFormat('')
+    )
+    .call(g => g.select('.domain').remove())
+    .call(g => g.selectAll('.tick line')
+      .attr('stroke', 'rgba(48, 54, 61, 0.4)')
+      .attr('stroke-dasharray', '2,2')
+    );
+
+  // X Axis
+  svg.append('g')
+    .attr('transform', `translate(0,${height - margin.bottom})`)
+    .call(d3.axisBottom(x).tickSize(0))
+    .call(g => g.select('.domain').attr('stroke', 'var(--border)'))
+    .call(g => g.selectAll('text')
+      .attr('fill', 'var(--text2)')
+      .style('font-size', '9px')
+      .attr('dy', '8px')
+    );
+
+  // Y Axis
+  svg.append('g')
+    .attr('transform', `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format('d')).tickSize(0))
+    .call(g => g.select('.domain').remove())
+    .call(g => g.selectAll('text')
+      .attr('fill', 'var(--text2)')
+      .style('font-size', '9px')
+      .attr('dx', '-4px')
+    );
+
+  // Tooltip
+  const tooltip = d3.select('body').selectAll('.chart-tooltip').data([0]);
+  const tooltipEnter = tooltip.enter().append('div')
+    .attr('class', 'chart-tooltip')
+    .style('position', 'absolute')
+    .style('visibility', 'hidden')
+    .style('background', 'var(--surface)')
+    .style('border', '1px solid var(--border)')
+    .style('color', 'var(--text)')
+    .style('padding', '6px 10px')
+    .style('border-radius', '6px')
+    .style('font-size', '11px')
+    .style('pointer-events', 'none')
+    .style('box-shadow', '0 4px 12px rgba(0,0,0,0.5)')
+    .style('z-index', '9999');
+
+  const activeTooltip = tooltip.merge(tooltipEnter);
+
+  // Gradient definitions
+  const gradientId = 'bar-gradient';
+  const defs = svg.append('defs');
+  const linearGradient = defs.append('linearGradient')
+    .attr('id', gradientId)
+    .attr('x1', '0%')
+    .attr('y1', '0%')
+    .attr('x2', '0%')
+    .attr('y2', '100%');
+
+  linearGradient.append('stop')
+    .attr('offset', '0%')
+    .attr('stop-color', 'var(--accent)');
+
+  linearGradient.append('stop')
+    .attr('offset', '100%')
+    .attr('stop-color', 'rgba(47, 129, 247, 0.2)');
+
+  // Bars rendering
+  svg.selectAll('.bar')
+    .data(data)
+    .enter()
+    .append('rect')
+    .attr('class', 'bar')
+    .attr('x', d => x(d.label))
+    .attr('width', x.bandwidth())
+    .attr('y', height - margin.bottom)
+    .attr('height', 0)
+    .attr('rx', 3)
+    .attr('fill', `url(#${gradientId})`)
+    .on('mouseover', function(event, d) {
+      d3.select(this).attr('fill', 'rgba(47, 129, 247, 0.9)');
+      activeTooltip.html(`<strong>${d.date}</strong><br>Cards Studied: <span style="color:var(--green);font-weight:bold">${d.count}</span>`)
+        .style('visibility', 'visible');
+    })
+    .on('mousemove', function(event) {
+      activeTooltip.style('top', (event.pageY - 50) + 'px')
+        .style('left', (event.pageX + 10) + 'px');
+    })
+    .on('mouseout', function() {
+      d3.select(this).attr('fill', `url(#${gradientId})`);
+      activeTooltip.style('visibility', 'hidden');
+    })
+    .transition()
+    .duration(600)
+    .attr('y', d => y(d.count))
+    .attr('height', d => Math.max(0, height - margin.bottom - y(d.count)));
+}
+
+async function calculateStreak() {
+  const history = await dbGet('settings', 'ankiHistory');
+  if (!history || !history.dates) return 0;
+  const dates = history.dates.sort().reverse();
+  let streak = 0;
+  const today = new Date().toISOString().split('T')[0];
+  let checkDate = new Date();
+  // Allow today or yesterday as streak start
+  if (!dates.includes(today)) {
+    checkDate.setDate(checkDate.getDate() - 1);
+    if (!dates.includes(checkDate.toISOString().split('T')[0])) return 0;
+  }
+  for (let i = 0; i < 365; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = d.toISOString().split('T')[0];
+    if (dates.includes(ds)) streak++;
+    else if (i > 0) break;
+  }
+  return streak;
+}
+
+async function startAnkiStudy() {
+  const cards = await dbGetAll('ankiCards');
+  const now = Date.now();
+  // Get due cards: new + learning + review due
+  const dueCards = cards.filter(c => c.status === 'new' || c.status === 'learning' || c.due <= now);
+  if (dueCards.length === 0) {
+    document.getElementById('anki-done').style.display = '';
+    return;
+  }
+  // Sort: new first, then learning, then due
+  dueCards.sort((a, b) => {
+    const order = { new: 0, learning: 1, review: 2 };
+    return (order[a.status] || 2) - (order[b.status] || 2);
+  });
+  ankiReviewState = { cards: dueCards, current: 0, studied: 0 };
+  document.getElementById('anki-study-area').style.display = 'none';
+  document.getElementById('anki-review-area').style.display = '';
+  document.getElementById('anki-done').style.display = 'none';
+  renderAnkiCard();
+}
+
+function renderAnkiCard() {
+  if (!ankiReviewState) return;
+  const { cards, current } = ankiReviewState;
+  if (current >= cards.length) {
+    finishAnkiStudy();
+    return;
+  }
+  const card = cards[current];
+  // Display cloze with hidden answer
+  let display = card.clozeText.replace(/\{\{c1::(.*?)\}\}/g, '<span class="cloze-hidden" onclick="this.className=\'cloze-revealed\'">[...]</span>');
+  document.getElementById('anki-card-display').innerHTML = `
+    <div style="font-size:12px;color:var(--accent);margin-bottom:8px">${card.subject} — Card ${current + 1}/${cards.length}</div>
+    <div style="font-size:14px;line-height:1.6">${display}</div>
+    <div style="margin-top:8px;font-size:12px;color:var(--text2)">${card.question}</div>`;
+  document.getElementById('anki-answer-btn').style.display = '';
+  document.getElementById('anki-review-btns').style.display = 'none';
+}
+
+function revealAnkiAnswer() {
+  if (!ankiReviewState) return;
+  const card = ankiReviewState.cards[ankiReviewState.current];
+  // Show the answer
+  let display = card.clozeText.replace(/\{\{c1::(.*?)\}\}/g, '<span class="cloze-revealed">$1</span>');
+  document.getElementById('anki-card-display').innerHTML = `
+    <div style="font-size:12px;color:var(--accent);margin-bottom:8px">${card.subject}</div>
+    <div style="font-size:14px;line-height:1.6">${display}</div>
+    ${card.explanation ? '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2)">' + card.explanation + '</div>' : ''}`;
+  document.getElementById('anki-answer-btn').style.display = 'none';
+  document.getElementById('anki-review-btns').style.display = '';
+  // Show/hide "Again" button based on status
+  const btns = document.querySelectorAll('.review-btns button');
+  btns[0].innerHTML = 'Again<br><small>' + formatInterval(1) + '</small>';
+  btns[1].innerHTML = 'Hard<br><small>' + formatInterval(6) + '</small>';
+  btns[2].innerHTML = 'Good<br><small>' + formatInterval(card.interval || 10) + '</small>';
+  btns[3].innerHTML = 'Easy<br><small>' + formatInterval(card.interval ? Math.max(card.interval * 4, 5760) : 5760) + '</small>';
+}
+
+async function rateAnkiCard(quality) {
+  if (!ankiReviewState) return;
+  const card = ankiReviewState.cards[ankiReviewState.current];
+  // SM-2 algorithm
+  // quality: 1=Again, 2=Hard, 3=Good, 4=Easy
+  const q = quality; // map to 0-5 scale internally: 1->1, 2->2, 3->3, 4->5
+  const sm2q = quality === 4 ? 5 : quality;
+
+  if (sm2q < 3) {
+    // Failed: reset
+    card.reps = 0;
+    card.interval = quality === 1 ? 1 : 6; // 1 min or 6 min
+    card.status = 'learning';
+    card.lapses++;
+    card.due = Date.now() + card.interval * 60 * 1000;
+  } else {
+    // Passed
+    if (card.reps === 0) card.interval = quality === 4 ? 5760 : 10; // 4 days or 10 min
+    else if (card.reps === 1) card.interval = quality === 4 ? 5760 : 1440; // 4 days or 1 day
+    else card.interval = Math.round(card.interval * card.easeFactor);
+
+    // Adjust ease factor
+    card.easeFactor = Math.max(1.3, card.easeFactor + (0.1 - (5 - sm2q) * (0.08 + (5 - sm2q) * 0.02)));
+
+    card.reps++;
+    card.status = 'review';
+    card.due = Date.now() + card.interval * 60 * 1000;
+  }
+
+  await dbPut('ankiCards', card);
+  ankiReviewState.studied++;
+  ankiReviewState.current++;
+  await recordAnkiStudyCount(1);
+  renderAnkiCard();
+}
+
+async function finishAnkiStudy() {
+  if (!ankiReviewState) return;
+  const studied = ankiReviewState.studied;
+  
+  document.getElementById('anki-review-area').style.display = 'none';
+  document.getElementById('anki-done').style.display = '';
+  document.getElementById('anki-done-count').textContent = studied;
+  ankiReviewState = null;
+  renderAnki();
+}
+
+function formatInterval(minutes) {
+  if (minutes < 60) return minutes + 'm';
+  if (minutes < 1440) return Math.round(minutes / 60) + 'h';
+  return Math.round(minutes / 1440) + 'd';
+}
+
+// ===================== SETTINGS =====================
+function toggleSetting(key) {
+  settings[key] = !settings[key];
+  const el = document.getElementById('toggle-' + key.replace(/([A-Z])/g, '-$1').toLowerCase());
+  if (el) el.classList.toggle('on');
+  dbPut('settings', { key: 'appSettings', ...settings });
+  showToast(settings[key] ? '✅ Enabled' : '❌ Disabled');
+}
+
+async function resetProgress() {
+  if (!confirm('Reset all quiz progress and Anki cards? This cannot be undone.')) return;
+  await dbClear('progress');
+  await dbClear('ankiCards');
+  progressData = {};
+  showToast('✅ Progress reset');
+  renderHome();
+}
+
+async function resetEverything() {
+  if (!confirm('Reset ALL data including imported questions? This cannot be undone.')) return;
+  await dbClear('progress');
+  await dbClear('ankiCards');
+  await dbClear('importedQuestions');
+  progressData = {};
+  allQuestions = [...BUILTIN_QUESTIONS];
+  showToast('✅ All data reset');
+  renderHome();
+}
+
+// ===================== IMPORT =====================
+document.getElementById('file-input').addEventListener('change', async (e) => {
+  const files = e.target.files;
+  if (!files.length) return;
+  let imported = 0;
+  let pyqCount = 0;
+  for (const file of files) {
+    try {
+      const text = await file.text();
+      const isPYQ = file.name.toLowerCase().includes('pyq');
+      const questions = parseImportedHTML(text, file.name);
+      for (const q of questions) {
+        if (isPYQ) {
+          q.isPYQ = true;
+          if (!q.exam) q.exam = file.name.replace(/\.html?$/i, '').replace(/[-_]/g, ' ');
+          pyqCount++;
+        }
+        allQuestions.push(q);
+        await dbPut('importedQuestions', q);
+      }
+      imported += questions.length;
+    } catch (err) {
+      console.error('Import error:', err);
+    }
+  }
+  let msg = imported > 0 ? `✅ Imported ${imported} questions` : `⚠️ No questions found in file`;
+  if (pyqCount > 0) msg += ` (${pyqCount} PYQ → PYQ section)`;
+  if (imported === 0) msg += `. Check file format.`;
+  showToast(msg, imported > 0 ? 2500 : 4000);
+  e.target.value = '';
+  renderHome();
+});
+
+// Drag & drop
+const importArea = document.getElementById('import-area');
+importArea.addEventListener('dragover', (e) => { e.preventDefault(); importArea.classList.add('dragover'); });
+importArea.addEventListener('dragleave', () => importArea.classList.remove('dragover'));
+importArea.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  importArea.classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (!files.length) return;
+  let imported = 0;
+  for (const file of files) {
+    try {
+      const text = await file.text();
+      const isPYQ = file.name.toLowerCase().includes('pyq');
+      const questions = parseImportedHTML(text, file.name);
+      for (const q of questions) {
+        if (isPYQ) {
+          q.isPYQ = true;
+          if (!q.exam) q.exam = file.name.replace(/\.html?$/i, '').replace(/[-_]/g, ' ');
+        }
+        allQuestions.push(q);
+        await dbPut('importedQuestions', q);
+      }
+      imported += questions.length;
+    } catch (err) {
+      console.error('Import error:', err);
+    }
+  }
+  showToast(`✅ Imported ${imported} questions`);
+});
+
+function looksLikeQuestion(obj) {
+  if (typeof obj !== 'object' || obj === null) return false;
+  const text = obj.question || obj.text || obj.q;
+  if (!text || typeof text !== 'string') return false;
+  const opts = obj.options || obj.opts || obj.choices || obj.answers || obj.answersList;
+  if (!opts || !Array.isArray(opts) || opts.length < 2) return false;
+  return true;
+}
+
+function findMatchingBracket(str, startIdx) {
+  let depth = 0;
+  let inString = false;
+  let stringChar = '';
+  let escaped = false;
+  for (let i = startIdx; i < str.length; i++) {
+    const c = str[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (c === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (inString) {
+      if (c === stringChar) {
+        inString = false;
+      }
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') {
+      inString = true;
+      stringChar = c;
+      continue;
+    }
+    if (c === '[') {
+      depth++;
+    } else if (c === ']') {
+      depth--;
+      if (depth === 0) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
+function extractArraysFromJS(text) {
+  const arrays = [];
+  const assignmentRegex = /(?:var|let|const|window\.)?\s*([a-zA-Z0-9_$]+)\s*=\s*(?=\[)/g;
+  let match;
+  while ((match = assignmentRegex.exec(text)) !== null) {
+    const varName = match[1];
+    const startIdx = assignmentRegex.lastIndex; // index of '['
+    const endIdx = findMatchingBracket(text, startIdx);
+    if (endIdx !== -1) {
+      const arrayStr = text.substring(startIdx, endIdx + 1);
+      arrays.push({ name: varName, content: arrayStr });
+    }
+  }
+  return arrays;
+}
+
+function extractOptionsAndCorrect(obj) {
+  let options = [];
+  let correctIdx = 0;
+  
+  const optsSrc = obj.options || obj.opts || obj.choices || obj.answers || obj.answersList;
+  if (optsSrc && Array.isArray(optsSrc)) {
+    options = optsSrc.map(o => {
+      if (typeof o === 'object' && o !== null) {
+        return o.text || o.option || o.value || o.choice || o.answer || '';
+      }
+      return String(o);
+    });
+    
+    if (typeof obj.correct === 'number') {
+      correctIdx = obj.correct;
+    } else if (typeof obj.correctAnswer === 'number') {
+      correctIdx = obj.correctAnswer;
+    } else if (typeof obj.correctanswer === 'number') {
+      correctIdx = obj.correctanswer;
+    } else if (typeof obj.correct === 'string') {
+      const letterIdx = 'ABCDE'.indexOf(obj.correct.toUpperCase().trim());
+      if (letterIdx >= 0) correctIdx = letterIdx;
+    } else if (typeof obj.correctAnswer === 'string') {
+      const letterIdx = 'ABCDE'.indexOf(obj.correctAnswer.toUpperCase().trim());
+      if (letterIdx >= 0) correctIdx = letterIdx;
+    } else {
+      const foundIdx = optsSrc.findIndex(o => o && (o.correct === true || o.isCorrect === true || o.correctAnswer === true));
+      if (foundIdx >= 0) correctIdx = foundIdx;
+    }
+  } else {
+    const keys = Object.keys(obj);
+    const optKeys = ['a', 'b', 'c', 'd', 'e', 'A', 'B', 'C', 'D', 'E', 'opt1', 'opt2', 'opt3', 'opt4', 'option1', 'option2', 'option3', 'option4'];
+    const foundKeys = keys.filter(k => optKeys.includes(k)).sort((x, y) => x.localeCompare(y));
+    if (foundKeys.length >= 2) {
+      options = foundKeys.map(k => String(obj[k]));
+      const ansVal = obj.ans || obj.answer || obj.correct || obj.correctAnswer || obj.correctanswer;
+      if (typeof ansVal === 'string') {
+        const letterIdx = 'ABCDE'.indexOf(ansVal.toUpperCase().trim());
+        if (letterIdx >= 0) {
+          correctIdx = letterIdx;
+        } else {
+          const matchingIdx = options.findIndex(o => o.toLowerCase().trim() === ansVal.toLowerCase().trim());
+          if (matchingIdx >= 0) correctIdx = matchingIdx;
+        }
+      } else if (typeof ansVal === 'number') {
+        correctIdx = ansVal;
+      }
+    }
+  }
+  
+  return { options, correctIdx };
+}
+
+function extractExplanation(obj) {
+  let explObj = { short: '', detail: '', ref: '', wrong: [], examiner: '', differentiator: '' };
+  const expVal = obj.explanation || obj.expl || obj.desc || obj.feedback || obj.rationale || obj.analysis || obj.reason || obj.discussion;
+  if (expVal) {
+    if (typeof expVal === 'object' && expVal !== null) {
+      explObj = {
+        short: expVal.short || expVal.text || expVal.brief || '',
+        detail: expVal.detail || expVal.detailed || expVal.long || '',
+        ref: expVal.ref || expVal.reference || '',
+        wrong: Array.isArray(expVal.wrong) ? expVal.wrong : [],
+        examiner: expVal.examiner || '',
+        differentiator: expVal.differentiator || ''
+      };
+    } else {
+      explObj.short = String(expVal);
+    }
+  }
+  return explObj;
+}
+
+function extractQuestionsFromHTML(doc, subject, exam) {
+  const list = [];
+  let blocks = doc.querySelectorAll('.mcq-card, .question-card, .quiz-question, .question-block, .mcq, .question, .card, .q-card, .question-wrapper');
+  
+  if (blocks.length === 0) {
+    blocks = doc.querySelectorAll('.quiz-container > div, .questions-list > div, form > div, fieldset');
+  }
+  
+  if (blocks.length > 0) {
+    blocks.forEach((block, idx) => {
+      const qEl = block.querySelector('.question-text, .q-text, .question, .q-text-content, h3, h4, .title, p.q, b, strong');
+      if (!qEl) return;
+      let questionText = qEl.innerHTML.trim();
+      
+      const optEls = block.querySelectorAll('.option, .q-option, .choice, li, label, td, .ans-option');
+      const options = [];
+      let correctIdx = -1;
+      
+      optEls.forEach((optEl) => {
+        let text = optEl.innerText.replace(/^[A-Ea-e][\.\)\s:-]+/, '').trim();
+        if (text && text !== qEl.innerText.trim()) {
+          if (!options.includes(text)) {
+            options.push(text);
+            const isCorrect = optEl.classList.contains('correct') || 
+                              optEl.classList.contains('active') || 
+                              optEl.classList.contains('selected-correct') ||
+                              optEl.querySelector('.correct') || 
+                              optEl.dataset.correct === 'true' || 
+                              optEl.querySelector('[data-correct="true"]') ||
+                              optEl.innerHTML.includes('✓') ||
+                              optEl.innerHTML.includes('correct-answer');
+            if (isCorrect) {
+              correctIdx = options.length - 1;
+            }
+          }
+        }
+      });
+      
+      const imgEls = block.querySelectorAll('img');
+      let imgHtml = '';
+      imgEls.forEach(img => {
+        if (!qEl.contains(img)) {
+          const src = img.getAttribute('src');
+          if (src) {
+            imgHtml += `<div class="imported-q-img" style="margin-top: 8px;"><img src="${src}" style="max-width: 100%; max-height: 300px; border-radius: 6px; display: block;" /></div>`;
+          }
+        }
+      });
+      if (imgHtml) questionText += imgHtml;
+      
+      const expEl = block.querySelector('.explanation, .q-explanation, .expl, .desc, .feedback, .rationale, .analysis');
+      let expText = expEl ? expEl.innerHTML.trim() : '';
+      
+      if (correctIdx === -1) {
+        const correctBadge = block.querySelector('.correct, [data-correct="true"], .answer, .correct-answer');
+        if (correctBadge) {
+          const badgeText = correctBadge.innerText.trim();
+          const matchLetter = badgeText.match(/(?:Answer|Correct)[:\s]*([A-Ea-e])/i);
+          if (matchLetter) {
+            const letterIdx = 'ABCDE'.indexOf(matchLetter[1].toUpperCase());
+            if (letterIdx >= 0) correctIdx = letterIdx;
+          }
+        }
+      }
+      
+      if (correctIdx === -1) correctIdx = 0;
+      
+      if (questionText && options.length >= 2) {
+        list.push({
+          id: 'imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          subject,
+          exam,
+          question: questionText,
+          options: options.slice(0, 5),
+          correct: correctIdx,
+          explanation: { short: expText, detail: '', ref: '', wrong: [], examiner: '', differentiator: '' }
+        });
+      }
+    });
+  }
+  
+  return list;
+}
+
+function parseDocumentQuestions(doc, defaultSubject, defaultExam) {
+  let found = [];
+  
+  doc.querySelectorAll('script').forEach(sc => {
+    const text = sc.textContent;
+    const jsArrays = extractArraysFromJS(text);
+    jsArrays.forEach(arrObj => {
+      if (!arrObj.content.includes('question') && !arrObj.content.includes('options') && !arrObj.content.includes('text')) {
+        return;
+      }
+      
+      try {
+        const arr = new Function("return " + arrObj.content)();
+        if (Array.isArray(arr)) {
+          arr.forEach(q => {
+            if (looksLikeQuestion(q)) {
+              const { options, correctIdx } = extractOptionsAndCorrect(q);
+              let questionText = q.question || q.text || q.q;
+              
+              if (q.image || q.img) {
+                questionText += `<div class="imported-q-img" style="margin-top: 8px;"><img src="${q.image || q.img}" style="max-width:100%; max-height: 300px; border-radius:6px; display: block;" /></div>`;
+              }
+              
+              const explObj = extractExplanation(q);
+              
+              found.push({
+                id: q.id || 'imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                subject: q.subject || defaultSubject,
+                exam: q.exam || defaultExam,
+                question: questionText,
+                options: options,
+                correct: correctIdx,
+                explanation: explObj
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.error('JS array eval error for variable ' + arrObj.name + ':', e);
+      }
+    });
+  });
+  
+  if (found.length > 0) return found;
+  
+  found = extractQuestionsFromHTML(doc, defaultSubject, defaultExam);
+  if (found.length > 0) return found;
+  
+  const tables = doc.querySelectorAll('table');
+  tables.forEach((table) => {
+    const rows = table.querySelectorAll('tr');
+    let currentQ = null;
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td, th');
+      if (cells.length === 1) {
+        const t = cells[0].innerHTML.trim();
+        if (t.length > 10) {
+          if (currentQ && currentQ.options.length >= 2) found.push(currentQ);
+          currentQ = {
+            id: 'imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            subject: defaultSubject,
+            exam: defaultExam,
+            question: t,
+            options: [],
+            correct: 0,
+            explanation: { short: '', detail: '', ref: '', wrong: [], examiner: '', differentiator: '' }
+          };
+        }
+      } else if (cells.length >= 2 && currentQ) {
+        const prefix = cells[0].innerText.trim();
+        const content = cells[1].innerHTML.trim();
+        if (prefix.match(/^[A-E][\.\):]?$/i) || row.classList.contains('option') || row.querySelector('input[type=radio]')) {
+          currentQ.options.push(content);
+          if (row.classList.contains('correct') || row.dataset.correct === 'true' || cells[0].innerText.includes('✓') || row.querySelector('.correct')) {
+            currentQ.correct = currentQ.options.length - 1;
+          }
+        }
+      }
+    });
+    if (currentQ && currentQ.options.length >= 2) found.push(currentQ);
+  });
+  
+  return found;
+}
+
+function parseFlatTextFallback(text, defaultSubject, defaultExam) {
+  const questions = [];
+  const parts = text.split(/\n\s*(?=\d+[\.\)]\s)/);
+  for (const part of parts) {
+    const lines = part.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length < 3) continue;
+    let qLine = lines[0].replace(/^\d+[\.\)]\s*/, '');
+    const opts = [];
+    let ansIdx = 0;
+    let expl = '';
+    for (let i = 1; i < lines.length; i++) {
+      const l = lines[i];
+      const optMatch = l.match(/^([A-Ea-e])[\.\):]\s*(.+)/);
+      if (optMatch) {
+        opts.push(optMatch[2].trim());
+      }
+      const ansMatch = l.match(/^(?:Answer|Correct)[:\s]*([A-Ea-e])/i);
+      if (ansMatch) {
+        ansIdx = 'ABCDE'.indexOf(ansMatch[1].toUpperCase());
+        if (ansIdx < 0) ansIdx = 0;
+      }
+      const expMatch = l.match(/^(?:Explanation|Reason)[:\s]*(.+)/i);
+      if (expMatch) expl = expMatch[1].trim();
+    }
+    if (qLine && opts.length >= 2) {
+      questions.push({
+        id: 'imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        subject: defaultSubject,
+        exam: defaultExam,
+        question: qLine,
+        options: opts.slice(0, 5),
+        correct: ansIdx,
+        explanation: { short: expl, detail: '', ref: '', wrong: [], examiner: '', differentiator: '' }
+      });
+    }
+  }
+  return questions;
+}
+
+function parseImportedHTML(html, fileName = 'Imported') {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const questions = [];
+  
+  const defaultSubject = fileName.replace(/\.html?$/i, '').replace(/[-_]/g, ' ') || 'Imported';
+  const defaultExam = defaultSubject;
+
+  function extractFromDoc(documentObj, subSubject, subExam) {
+    const iframes = documentObj.querySelectorAll('iframe[srcdoc]');
+    if (iframes.length > 0) {
+      iframes.forEach(iframe => {
+        let src = iframe.getAttribute('srcdoc');
+        if (src) {
+          const ta = document.createElement('textarea');
+          ta.innerHTML = src;
+          src = ta.value;
+          
+          const iframeSubject = iframe.getAttribute('title') || iframe.getAttribute('name') || subSubject;
+          const iframeExam = iframeSubject;
+          
+          try {
+            const subDoc = parser.parseFromString(src, 'text/html');
+            const qs = parseDocumentQuestions(subDoc, iframeSubject, iframeExam);
+            questions.push(...qs);
+            extractFromDoc(subDoc, iframeSubject, iframeExam);
+          } catch (e) {
+            console.error('Error parsing iframe srcdoc:', e);
+          }
+        }
+      });
+    }
+  }
+
+  extractFromDoc(doc, defaultSubject, defaultExam);
+
+  const mainQs = parseDocumentQuestions(doc, defaultSubject, defaultExam);
+  mainQs.forEach(q => {
+    if (!questions.some(existing => existing.question === q.question)) {
+      questions.push(q);
+    }
+  });
+
+  if (questions.length === 0) {
+    const fallbackQs = parseFlatTextFallback(doc.body ? doc.body.innerText : html, defaultSubject, defaultExam);
+    questions.push(...fallbackQs);
+  }
+
+  return questions;
+}
+
+// ===================== TOAST =====================
+function showToast(msg, dur) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), dur || 2500);
+}
+
+// ===================== INIT =====================
+async function init() {
+  try {
+    await openDB();
+    // Load progress
+    const progressArr = await dbGetAll('progress');
+    for (const p of progressArr) progressData[p.id] = p;
+    // Load settings
+    const savedSettings = await dbGet('settings', 'appSettings');
+    if (savedSettings) {
+      settings = { ...settings, ...savedSettings };
+      delete settings.key;
+    }
+    const toggleEl = document.getElementById('toggle-explanations');
+    if (settings.showExplanations) toggleEl.classList.add('on');
+    else toggleEl.classList.remove('on');
+    // Load imported questions
+    const imported = await dbGetAll('importedQuestions');
+    for (const q of imported) {
+      if (!allQuestions.find(bq => bq.id === q.id)) allQuestions.push(q);
+    }
+    renderHome();
+  } catch (err) {
+    console.error('Init error:', err);
+    renderHome();
+  }
+}
+
+init();
+
+// Register service worker if supported
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+      .catch(err => console.error('Service Worker registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>

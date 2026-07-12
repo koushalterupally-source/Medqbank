@@ -1,0 +1,28 @@
+#!/bin/sh
+DIRNAME=$(dirname "$0")
+APP_HOME=$(cd "$DIRNAME" && pwd -P)
+CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+
+if [ ! -f "$CLASSPATH" ]; then
+    echo "Downloading Gradle wrapper..."
+    curl -sL "https://raw.githubusercontent.com/nicovince/gradlew/refs/heads/master/gradle/wrapper/gradle-wrapper.jar" -o "$CLASSPATH" 2>/dev/null
+    if [ ! -f "$CLASSPATH" ] || [ ! -s "$CLASSPATH" ]; then
+        # Alternative: download full gradle and extract wrapper
+        GRADLE_VER=8.5
+        curl -sL "https://services.gradle.org/distributions/gradle-${GRADLE_VER}-bin.zip" -o /tmp/gradle.zip
+        cd /tmp && /tmp/jdk-17.0.2/bin/jar xf gradle.zip "gradle-${GRADLE_VER}/lib/gradle-wrapper.jar" 2>/dev/null
+        cp "/tmp/gradle-${GRADLE_VER}/lib/gradle-wrapper.jar" "$CLASSPATH" 2>/dev/null
+        cd "$APP_HOME"
+    fi
+fi
+
+if [ -n "$JAVA_HOME" ]; then
+    JAVACMD="$JAVA_HOME/bin/java"
+else
+    JAVACMD="java"
+fi
+
+exec "$JAVACMD" -Xmx64m -Xms64m \
+    "-Dorg.gradle.appname=gradlew" \
+    -classpath "$CLASSPATH" \
+    org.gradle.wrapper.GradleWrapperMain "$@"

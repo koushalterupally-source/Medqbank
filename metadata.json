@@ -1,0 +1,7 @@
+{
+  "name": "MedQuiz",
+  "description": "A comprehensive medical quiz app featuring interactive mock exams, flashcard reviews (Anki style), CEREB subject loading, and customizable HTML question file importing.",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
