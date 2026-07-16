@@ -1,6 +1,270 @@
 {
  "subjects": [
   {
+   "name": "Anaesthesia",
+   "file": "pyq/anaesthesia.json",
+   "total": 101,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 7
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 4
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 7
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 8
+    },
+    {
+     "name": "NEET 2018",
+     "count": 7
+    },
+    {
+     "name": "NEET 2019",
+     "count": 6
+    },
+    {
+     "name": "NEET 2020",
+     "count": 4
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 14
+    },
+    {
+     "name": "NEET 2021",
+     "count": 5
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 4
+    },
+    {
+     "name": "NEET 2023",
+     "count": 3
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 6
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 12
+    },
+    {
+     "name": "NEET 2024",
+     "count": 14
+    }
+   ]
+  },
+  {
+   "name": "Anatomy",
+   "file": "pyq/anatomy.json",
+   "total": 276,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 23
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 22
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 19
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 24
+    },
+    {
+     "name": "NEET 2018",
+     "count": 14
+    },
+    {
+     "name": "NEET 2019",
+     "count": 18
+    },
+    {
+     "name": "NEET 2020",
+     "count": 17
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 23
+    },
+    {
+     "name": "NEET 2021",
+     "count": 7
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 37
+    },
+    {
+     "name": "NEET 2022",
+     "count": 5
+    },
+    {
+     "name": "NEET 2023",
+     "count": 8
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 25
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 24
+    },
+    {
+     "name": "NEET 2024",
+     "count": 10
+    }
+   ]
+  },
+  {
+   "name": "Biochemistry",
+   "file": "pyq/biochemistry.json",
+   "total": 266,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 19
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 21
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 18
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 20
+    },
+    {
+     "name": "NEET 2018",
+     "count": 16
+    },
+    {
+     "name": "NEET 2019",
+     "count": 12
+    },
+    {
+     "name": "NEET 2020",
+     "count": 14
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 25
+    },
+    {
+     "name": "NEET 2021",
+     "count": 12
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 27
+    },
+    {
+     "name": "NEET 2022",
+     "count": 10
+    },
+    {
+     "name": "NEET 2023",
+     "count": 15
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 17
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 19
+    },
+    {
+     "name": "NEET 2024",
+     "count": 21
+    }
+   ]
+  },
+  {
+   "name": "Dermatology",
+   "file": "pyq/dermatology.json",
+   "total": 139,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 9
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 10
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 10
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 12
+    },
+    {
+     "name": "NEET 2018",
+     "count": 7
+    },
+    {
+     "name": "NEET 2019",
+     "count": 8
+    },
+    {
+     "name": "NEET 2020",
+     "count": 5
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 13
+    },
+    {
+     "name": "NEET 2021",
+     "count": 6
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 16
+    },
+    {
+     "name": "NEET 2022",
+     "count": 7
+    },
+    {
+     "name": "NEET 2023",
+     "count": 4
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 13
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 7
+    },
+    {
+     "name": "NEET 2024",
+     "count": 12
+    }
+   ]
+  },
+  {
    "name": "ENT",
    "file": "pyq/ent.json",
    "total": 139,
@@ -68,21 +332,289 @@
    ]
   },
   {
-   "name": "Anaesthesia",
-   "file": "pyq/anaesthesia.json",
-   "total": 101,
+   "name": "Forensic Medicine",
+   "file": "pyq/forensic_medicine.json",
+   "total": 210,
    "subtopics": [
     {
      "name": "AIIMS 2017",
-     "count": 7
+     "count": 14
     },
     {
      "name": "AIIMS 2018",
-     "count": 4
+     "count": 19
     },
     {
      "name": "AIIMS 2019 (May & Nov)",
      "count": 7
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov",
+     "count": 18
+    },
+    {
+     "name": "NEET 2018",
+     "count": 11
+    },
+    {
+     "name": "NEET 2019",
+     "count": 11
+    },
+    {
+     "name": "NEET 2020",
+     "count": 8
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 18
+    },
+    {
+     "name": "NEET 2021",
+     "count": 10
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 28
+    },
+    {
+     "name": "NEET 2022",
+     "count": 8
+    },
+    {
+     "name": "NEET 2023",
+     "count": 8
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 20
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 12
+    },
+    {
+     "name": "NEET 2024",
+     "count": 18
+    }
+   ]
+  },
+  {
+   "name": "Medicine",
+   "file": "pyq/medicine.json",
+   "total": 488,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 44
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 38
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 24
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 31
+    },
+    {
+     "name": "NEET 2018",
+     "count": 29
+    },
+    {
+     "name": "NEET 2019",
+     "count": 25
+    },
+    {
+     "name": "NEET 2020",
+     "count": 23
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 28
+    },
+    {
+     "name": "NEET 2021",
+     "count": 21
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 62
+    },
+    {
+     "name": "NEET 2022",
+     "count": 23
+    },
+    {
+     "name": "NEET 2023",
+     "count": 17
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 38
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 44
+    },
+    {
+     "name": "NEET 2024",
+     "count": 41
+    }
+   ]
+  },
+  {
+   "name": "Microbiology",
+   "file": "pyq/microbiology.json",
+   "total": 370,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 28
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 24
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 20
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 37
+    },
+    {
+     "name": "NEET 2018",
+     "count": 18
+    },
+    {
+     "name": "NEET 2019",
+     "count": 23
+    },
+    {
+     "name": "NEET 2020",
+     "count": 20
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 25
+    },
+    {
+     "name": "NEET 2021",
+     "count": 11
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 45
+    },
+    {
+     "name": "NEET 2022",
+     "count": 11
+    },
+    {
+     "name": "NEET 2023",
+     "count": 13
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 34
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 37
+    },
+    {
+     "name": "NEET 2024",
+     "count": 24
+    }
+   ]
+  },
+  {
+   "name": "Obstetrics & Gynaecology",
+   "file": "pyq/obstetrics_gynaecology.json",
+   "total": 448,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 35
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 35
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 18
+    },
+    {
+     "name": "AIIMS 2020 (May and",
+     "count": 23
+    },
+    {
+     "name": "NEET 2018",
+     "count": 25
+    },
+    {
+     "name": "NEET 2019",
+     "count": 26
+    },
+    {
+     "name": "NEET 2020",
+     "count": 28
+    },
+    {
+     "name": "INICET 2021",
+     "count": 42
+    },
+    {
+     "name": "NEET 2021",
+     "count": 19
+    },
+    {
+     "name": "INICET 2022",
+     "count": 52
+    },
+    {
+     "name": "NEET 2022",
+     "count": 25
+    },
+    {
+     "name": "NEET 2023",
+     "count": 18
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 28
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 29
+    },
+    {
+     "name": "NEET 2024",
+     "count": 45
+    }
+   ]
+  },
+  {
+   "name": "Ophthalmology",
+   "file": "pyq/ophthalmology.json",
+   "total": 190,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 15
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 19
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 11
     },
     {
      "name": "AIIMS 2020 (May and Nov INI-CET)",
@@ -90,39 +622,43 @@
     },
     {
      "name": "NEET 2018",
-     "count": 7
+     "count": 12
     },
     {
      "name": "NEET 2019",
-     "count": 6
+     "count": 11
     },
     {
      "name": "NEET 2020",
-     "count": 4
+     "count": 11
     },
     {
      "name": "INI-CET 2021",
-     "count": 14
+     "count": 13
     },
     {
      "name": "NEET 2021",
-     "count": 5
+     "count": 8
     },
     {
-     "name": "INI-CET 2022",
-     "count": 4
+     "name": "INICET 2022",
+     "count": 21
     },
     {
-     "name": "NEET 2023",
-     "count": 3
-    },
-    {
-     "name": "INI-CET 2023",
+     "name": "NEET 2022",
      "count": 6
     },
     {
+     "name": "NEET 2023",
+     "count": 8
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 11
+    },
+    {
      "name": "INI-CET 2024",
-     "count": 12
+     "count": 22
     },
     {
      "name": "NEET 2024",
@@ -131,9 +667,344 @@
    ]
   },
   {
+   "name": "Orthopaedics",
+   "file": "pyq/orthopaedics.json",
+   "total": 175,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 20
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 12
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 15
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 15
+    },
+    {
+     "name": "NEET 2018",
+     "count": 10
+    },
+    {
+     "name": "NEET 2019",
+     "count": 9
+    },
+    {
+     "name": "NEET 2020",
+     "count": 6
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 14
+    },
+    {
+     "name": "NEET 2021",
+     "count": 6
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 17
+    },
+    {
+     "name": "NEET 2022",
+     "count": 7
+    },
+    {
+     "name": "NEET 2023",
+     "count": 6
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 11
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 11
+    },
+    {
+     "name": "NEET 2024",
+     "count": 16
+    }
+   ]
+  },
+  {
+   "name": "Pathology",
+   "file": "pyq/pathology.json",
+   "total": 421,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 34
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 22
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 33
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 34
+    },
+    {
+     "name": "NEET 2018",
+     "count": 20
+    },
+    {
+     "name": "NEET 2019",
+     "count": 19
+    },
+    {
+     "name": "NEET 2020",
+     "count": 26
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 34
+    },
+    {
+     "name": "NEET 2021",
+     "count": 15
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 57
+    },
+    {
+     "name": "NEET 2022",
+     "count": 10
+    },
+    {
+     "name": "NEET 2023",
+     "count": 12
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 41
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 31
+    },
+    {
+     "name": "NEET 2024",
+     "count": 33
+    }
+   ]
+  },
+  {
+   "name": "Pharmacology",
+   "file": "pyq/pharmacology.json",
+   "total": 407,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 32
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 35
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 20
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 33
+    },
+    {
+     "name": "NEET 2018",
+     "count": 24
+    },
+    {
+     "name": "NEET 2019",
+     "count": 24
+    },
+    {
+     "name": "NEET 2020",
+     "count": 22
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 35
+    },
+    {
+     "name": "NEET 2021",
+     "count": 16
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 57
+    },
+    {
+     "name": "NEET 2022",
+     "count": 15
+    },
+    {
+     "name": "NEET 2023",
+     "count": 12
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 34
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 24
+    },
+    {
+     "name": "NEET 2024",
+     "count": 24
+    }
+   ]
+  },
+  {
+   "name": "Physiology",
+   "file": "pyq/physiology.json",
+   "total": 273,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 20
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 23
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 15
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 24
+    },
+    {
+     "name": "NEET 2018",
+     "count": 14
+    },
+    {
+     "name": "NEET 2019",
+     "count": 19
+    },
+    {
+     "name": "NEET 2020",
+     "count": 17
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 22
+    },
+    {
+     "name": "NEET 2021",
+     "count": 5
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 31
+    },
+    {
+     "name": "NEET 2022",
+     "count": 6
+    },
+    {
+     "name": "NEET 2023",
+     "count": 9
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 23
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 31
+    },
+    {
+     "name": "NEET 2024",
+     "count": 14
+    }
+   ]
+  },
+  {
+   "name": "Preventive & Social Medicine",
+   "file": "pyq/preventive_social_medicine.json",
+   "total": 344,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 23
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 32
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 27
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov",
+     "count": 21
+    },
+    {
+     "name": "NEET 2018",
+     "count": 23
+    },
+    {
+     "name": "NEET 2019",
+     "count": 24
+    },
+    {
+     "name": "NEET 2020",
+     "count": 23
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 26
+    },
+    {
+     "name": "NEET 2021",
+     "count": 17
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 31
+    },
+    {
+     "name": "NEET 2022",
+     "count": 12
+    },
+    {
+     "name": "NEET 2023",
+     "count": 15
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 22
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 15
+    },
+    {
+     "name": "NEET 2024",
+     "count": 33
+    }
+   ]
+  },
+  {
    "name": "Psychiatry",
    "file": "pyq/psychiatry.json",
-   "total": 115,
+   "total": 113,
    "subtopics": [
     {
      "name": "AIIMS 2017",
@@ -176,10 +1047,6 @@
      "count": 11
     },
     {
-     "name": "NEET 2022",
-     "count": 2
-    },
-    {
      "name": "NEET 2023",
      "count": 5
     },
@@ -194,6 +1061,136 @@
     {
      "name": "NEET 2024",
      "count": 9
+    }
+   ]
+  },
+  {
+   "name": "Radiology",
+   "file": "pyq/radiology.json",
+   "total": 118,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 7
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 11
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 4
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 6
+    },
+    {
+     "name": "NEET 2018",
+     "count": 12
+    },
+    {
+     "name": "NEET 2019",
+     "count": 8
+    },
+    {
+     "name": "NEET 2020",
+     "count": 8
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 11
+    },
+    {
+     "name": "NEET 2021",
+     "count": 5
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 14
+    },
+    {
+     "name": "NEET 2023",
+     "count": 4
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 8
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 6
+    },
+    {
+     "name": "NEET 2024",
+     "count": 14
+    }
+   ]
+  },
+  {
+   "name": "Surgery",
+   "file": "pyq/surgery.json",
+   "total": 445,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 30
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 20
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 33
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 41
+    },
+    {
+     "name": "NEET 2018",
+     "count": 26
+    },
+    {
+     "name": "NEET 2019",
+     "count": 22
+    },
+    {
+     "name": "NEET 2020",
+     "count": 26
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 29
+    },
+    {
+     "name": "NEET 2021",
+     "count": 18
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 48
+    },
+    {
+     "name": "NEET 2022",
+     "count": 25
+    },
+    {
+     "name": "NEET 2023",
+     "count": 27
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 30
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 33
+    },
+    {
+     "name": "NEET 2024",
+     "count": 37
     }
    ]
   }

@@ -123,7 +123,8 @@ def process_file(path, subject):
         tname = htmlmod.unescape(testnames[ti]) if ti < len(testnames) else f'Test {ti+1}'
         qs = extract_questions(htmlmod.unescape(sd))
         for qi, q in enumerate(qs):
-            qid = f'pyq_{subject.lower().replace(" ","_")}_{ti}_{qi}'
+            slug = re.sub(r'[^a-z0-9]+','_',subject.lower()).strip('_')
+            qid = f'pyq_{slug}_{ti}_{qi}'
             out.append(build(q, subject, tname, qid))
     return out
 
