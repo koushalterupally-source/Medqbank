@@ -4,18 +4,17 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import androidx.webkit.WebViewAssetLoader;
 
 public class MainActivity extends Activity {
 
@@ -29,8 +28,8 @@ public class MainActivity extends Activity {
         // Fullscreen immersive
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
 
         webView = new WebView(this);
@@ -39,33 +38,39 @@ public class MainActivity extends Activity {
         // WebView settings for app-like experience
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);           // IndexedDB support
+        settings.setDomStorageEnabled(true); // IndexedDB support
         settings.setDatabaseEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowFileAccessFromFileURLs(true);
-settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-
-        // Set app cache path for offline
-        // App cache deprecated in API 33+, use service worker instead
 
         // User agent to trigger PWA-like behavior
         settings.setUserAgentString(settings.getUserAgentString() + " MedQuizApp/1.0");
 
-        // Keep navigation in WebView
+        // Serve bundled assets over a virtual https origin so fetch()/XHR to local
+        // JSON files work reliably. Reading file:// via XHR/fetch is blocked on modern
+        // WebView regardless of the legacy allowFileAccessFromFileURLs flags.
+        final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // Open external links in browser
-                if (!url.startsWith("file://")) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    startActivity(intent);
-                    return true;
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri url = request.getUrl();
+                // Keep app navigation inside the WebView; open real external links in browser
+                if ("https".equals(url.getScheme())
+                        && "appassets.androidplatform.net".equals(url.getHost())) {
+                    return false;
                 }
-                return false;
+                startActivity(new Intent(Intent.ACTION_VIEW, url));
+                return true;
             }
         });
 
@@ -73,9 +78,9 @@ settings.setAllowUniversalAccessFromFileURLs(true);
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(
-                WebView webView,
-                ValueCallback<Uri[]> callback,
-                FileChooserParams fileChooserParams
+                    WebView webView,
+                    ValueCallback<Uri[]> callback,
+                    FileChooserParams fileChooserParams
             ) {
                 if (fileCallback != null) {
                     fileCallback.onReceiveValue(null);
@@ -88,15 +93,15 @@ settings.setAllowUniversalAccessFromFileURLs(true);
                 intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
 
                 startActivityForResult(
-                    Intent.createChooser(intent, "Select CEREB HTML File"),
-                    100
+                        Intent.createChooser(intent, "Select CEREB HTML File"),
+                        100
                 );
                 return true;
             }
         });
 
-        // Load the app
-        webView.loadUrl("file:///android_asset/index.html");
+        // Load the app from the virtual https origin
+        webView.loadUrl("https://appassets.androidplatform.net/assets/index.html");
     }
 
     @Override
