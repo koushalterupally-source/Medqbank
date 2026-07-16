@@ -113,7 +113,8 @@ html:not(.light-theme) .streak-bar{box-shadow:none}
 .quiz-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:200;display:none;flex-direction:column;max-width:480px;margin:0 auto}
 .quiz-overlay.show{display:flex}
 .quiz-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--surface);border-bottom:1px solid var(--border)}
-.quiz-header .qh-title{font-size:15px;font-weight:600}
+.quiz-header .qh-title{font-size:15px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quiz-header .qh-count{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;margin:0 10px;flex-shrink:0}
 .quiz-header .qh-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:4px 8px}
 .quiz-progress{height:4px;background:var(--border)}
 .quiz-progress .fill{height:100%;background:var(--accent);transition:width .3s}
@@ -366,6 +367,7 @@ A medical exam preparation app with spaced repetition.<br><br>
 <div class="quiz-overlay" id="quiz-overlay">
 <div class="quiz-header">
 <div class="qh-title" id="quiz-title">Quiz</div>
+<div class="qh-count" id="quiz-count"></div>
 <button class="qh-close" onclick="closeQuiz()">✕</button>
 </div>
 <div class="quiz-progress"><div class="fill" id="quiz-progress-fill"></div></div>
@@ -994,6 +996,8 @@ function showPYQDetail(q) {
   const overlay = document.getElementById('quiz-overlay');
   overlay.classList.add('show');
   document.getElementById('quiz-title').textContent = q.subject;
+  const pyqCount = document.getElementById('quiz-count');
+  if (pyqCount) pyqCount.textContent = '';
   document.getElementById('quiz-nav').style.display = 'none';
   const body = document.getElementById('quiz-body');
   body.innerHTML = `
@@ -1202,8 +1206,14 @@ function renderQuizQuestion() {
   document.getElementById('btn-submit').style.display = current === total - 1 ? '' : 'none';
 
   const answered = answers[q.id] !== undefined;
-  const NAV_DOT_LIMIT = 150;
-  let navHtml;
+  // Compact position indicator lives in the header so it never pushes the question down.
+  const countEl = document.getElementById('quiz-count');
+  if (countEl) countEl.textContent = `${current + 1} / ${total}`;
+
+  // Only show the tappable dot grid for short quizzes; for large banks (CEREB
+  // subtopics) it dominated the screen, so we rely on the header counter + Prev/Next.
+  const NAV_DOT_LIMIT = 20;
+  let navHtml = '';
   if (total <= NAV_DOT_LIMIT) {
     navHtml = `<div class="nav-dots">${questions.map((qq, i) => {
       let cls = 'nav-dot';
@@ -1212,14 +1222,12 @@ function renderQuizQuestion() {
       if (a !== undefined) cls += a === qq.correct ? ' correct-dot' : ' wrong-dot';
       return `<div class="${cls}" onclick="quizGoTo(${i})">${i + 1}</div>`;
     }).join('')}</div>`;
-  } else {
-    navHtml = `<div class="nav-dots"><div style="font-size:13px;color:var(--text2)">Question ${current + 1} of ${total}</div></div>`;
   }
 
   const body = document.getElementById('quiz-body');
   body.innerHTML = `
     ${navHtml}
-    <div class="q-text" style="margin-top:12px">${q.question}</div>
+    <div class="q-text" style="margin-top:${navHtml ? '12px' : '0'}">${q.question}</div>
     <div class="q-options">${q.options.map((o, i) => {
       let cls = 'q-opt';
       if (answered) {
