@@ -1,0 +1,201 @@
+{
+ "subjects": [
+  {
+   "name": "ENT",
+   "file": "pyq/ent.json",
+   "total": 139,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 9
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 8
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 5
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 12
+    },
+    {
+     "name": "NEET 2018",
+     "count": 6
+    },
+    {
+     "name": "NEET 2019",
+     "count": 6
+    },
+    {
+     "name": "NEET 2020",
+     "count": 8
+    },
+    {
+     "name": "INICET 2021",
+     "count": 10
+    },
+    {
+     "name": "NEET 2021",
+     "count": 6
+    },
+    {
+     "name": "INICET 2022",
+     "count": 14
+    },
+    {
+     "name": "NEET 2022",
+     "count": 9
+    },
+    {
+     "name": "NEET 2023",
+     "count": 6
+    },
+    {
+     "name": "INICET 2023",
+     "count": 14
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 13
+    },
+    {
+     "name": "NEET 2024",
+     "count": 13
+    }
+   ]
+  },
+  {
+   "name": "Anaesthesia",
+   "file": "pyq/anaesthesia.json",
+   "total": 101,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 7
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 4
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 7
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 8
+    },
+    {
+     "name": "NEET 2018",
+     "count": 7
+    },
+    {
+     "name": "NEET 2019",
+     "count": 6
+    },
+    {
+     "name": "NEET 2020",
+     "count": 4
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 14
+    },
+    {
+     "name": "NEET 2021",
+     "count": 5
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 4
+    },
+    {
+     "name": "NEET 2023",
+     "count": 3
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 6
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 12
+    },
+    {
+     "name": "NEET 2024",
+     "count": 14
+    }
+   ]
+  },
+  {
+   "name": "Psychiatry",
+   "file": "pyq/psychiatry.json",
+   "total": 115,
+   "subtopics": [
+    {
+     "name": "AIIMS 2017",
+     "count": 9
+    },
+    {
+     "name": "AIIMS 2018",
+     "count": 9
+    },
+    {
+     "name": "AIIMS 2019 (May & Nov)",
+     "count": 8
+    },
+    {
+     "name": "AIIMS 2020 (May and Nov INI-CET)",
+     "count": 13
+    },
+    {
+     "name": "NEET 2018",
+     "count": 10
+    },
+    {
+     "name": "NEET 2019",
+     "count": 7
+    },
+    {
+     "name": "NEET 2020",
+     "count": 8
+    },
+    {
+     "name": "INI-CET 2021",
+     "count": 7
+    },
+    {
+     "name": "NEET 2021",
+     "count": 5
+    },
+    {
+     "name": "INI-CET 2022",
+     "count": 11
+    },
+    {
+     "name": "NEET 2022",
+     "count": 2
+    },
+    {
+     "name": "NEET 2023",
+     "count": 5
+    },
+    {
+     "name": "INI-CET 2023",
+     "count": 7
+    },
+    {
+     "name": "INI-CET 2024",
+     "count": 5
+    },
+    {
+     "name": "NEET 2024",
+     "count": 9
+    }
+   ]
+  }
+ ]
+}

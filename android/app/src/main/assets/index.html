@@ -67,6 +67,14 @@ html:not(.light-theme) .quote-card{box-shadow:none}
 .search-box{width:100%;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:15px;outline:none;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:border-color .2s}
 html:not(.light-theme) .search-box{box-shadow:none;border:none}
 .search-box:focus{border-color:var(--accent)}
+.jump-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.jump-card{border-radius:var(--radius);padding:18px 16px;cursor:pointer;color:#fff;transition:transform .15s;box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+.jump-card:active{transform:scale(.97)}
+.jump-cereb{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+.jump-pyq{background:linear-gradient(135deg,#0ea5e9,#2563eb)}
+.jump-card .jc-icon{font-size:26px;margin-bottom:10px}
+.jump-card .jc-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.jump-card .jc-desc{font-size:12px;opacity:.85;line-height:1.4}
 .exam-section{margin-bottom:24px}
 .exam-header{font-size:14px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .pyq-item{background:var(--card);border:none;border-radius:var(--radius);padding:16px;margin-bottom:12px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
@@ -238,15 +246,31 @@ Review your past mistakes to reinforce learning. Select a subject below to start
 <div class="stat-box"><div class="val" id="stat-attempted">0</div><div class="lbl">Attempted</div></div>
 <div class="stat-box"><div class="val" id="stat-accuracy">0%</div><div class="lbl">Accuracy</div></div>
 </div>
-<div class="section-title">Subjects</div>
-<div class="subject-grid" id="subject-grid"></div>
+<div class="section-title">Jump back in</div>
+<div class="jump-grid">
+<div class="jump-card jump-cereb" onclick="switchPage('cereb')">
+<div class="jc-icon">🧬</div>
+<div class="jc-name">Cerebellum</div>
+<div class="jc-desc">Full subject-wise MCQ bank</div>
+</div>
+<div class="jump-card jump-pyq" onclick="switchPage('pyq')">
+<div class="jc-icon">📋</div>
+<div class="jc-name">Previous Year Qs</div>
+<div class="jc-desc">AIIMS · NEET · INICET</div>
+</div>
+</div>
 </div>
 
 <!-- PYQ -->
 <div class="page" id="page-pyq">
-<div class="section-title">Previous Year Questions</div>
-<input class="search-box" id="pyq-search" placeholder="Search questions..." type="text">
-<div id="pyq-list"></div>
+<div class="section-title" id="pyq-title">Previous Year Questions</div>
+<div id="pyq-subject-view">
+<div class="subject-grid" id="pyq-subject-grid"></div>
+</div>
+<div id="pyq-subtopic-view" style="display:none">
+<button class="btn btn-sm" onclick="pyqBackToSubjects()">← Subjects</button>
+<div id="pyq-subtopic-list" style="margin-top:10px"></div>
+</div>
 </div>
 
 <!-- CEREB -->
@@ -875,7 +899,6 @@ function renderHome() {
   setupTopicOfTheDay();
 
   // Stats
-  const subjects = getSubjects();
   let total = allQuestions.length; // This is baseline from builtins/imported
   let attempted = 0;
   let correct = 0;
@@ -892,20 +915,6 @@ function renderHome() {
 
   // Magic Module
   renderMagic();
-
-  // Subject cards
-  const grid = document.getElementById('subject-grid');
-  grid.innerHTML = '';
-  for (const subj of subjects) {
-    const qs = allQuestions.filter(q => q.subject === subj);
-    const subAttempted = qs.filter(q => progressData[q.id] && progressData[q.id].attempted).length;
-    const pct = qs.length ? Math.round(subAttempted / qs.length * 100) : 0;
-    const card = document.createElement('div');
-    card.className = 'subject-card';
-    card.innerHTML = `<div class="sc-name">${subj}</div><div class="sc-count">${subAttempted}/${qs.length} attempted</div><div class="progress-bar"><div class="fill" style="width:${pct}%"></div></div>`;
-    card.onclick = () => startQuiz(subj);
-    grid.appendChild(card);
-  }
 }
 
 function getSubjects() {
@@ -962,50 +971,97 @@ function renderMagic() {
   }
 }
 
-// ===================== PYQ PAGE =====================
-function renderPYQ(filter = '') {
-  const list = document.getElementById('pyq-list');
-  list.innerHTML = '';
-  const exams = {};
-  for (const q of allQuestions) {
-    const key = q.exam || 'Miscellaneous';
-    if (!exams[key]) exams[key] = [];
-    if (filter && !q.question.toLowerCase().includes(filter.toLowerCase()) && !q.subject.toLowerCase().includes(filter.toLowerCase())) continue;
-    exams[key].push(q);
-  }
-  for (const [exam, qs] of Object.entries(exams)) {
-    if (qs.length === 0) continue;
-    const section = document.createElement('div');
-    section.className = 'exam-section';
-    section.innerHTML = `<div class="exam-header">${exam} (${qs.length})</div>`;
-    for (const q of qs) {
-      const item = document.createElement('div');
-      item.className = 'pyq-item';
-      item.innerHTML = `<div class="pq-subject">${q.subject}</div><div class="pq-q">${q.question}</div><div class="pq-meta">${q.year || ''}</div>`;
-      item.onclick = () => showPYQDetail(q);
-      section.appendChild(item);
+// ===================== PYQ PAGE (lazy-loaded exam bank) =====================
+let pyqManifest = null;
+let pyqSubjectCache = {}; // file -> questions array
+
+async function loadPyqManifest() {
+  if (pyqManifest) return pyqManifest;
+  try {
+    const text = await xhrGetText('pyq/manifest.json');
+    pyqManifest = JSON.parse(text);
+  } catch (err) {
+    try {
+      const text = await xhrGetText('file:///android_asset/pyq/manifest.json');
+      pyqManifest = JSON.parse(text);
+    } catch (err2) {
+      pyqManifest = { subjects: [] };
     }
-    list.appendChild(section);
   }
-  if (list.children.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="es-icon">🔍</div><div class="es-text">No questions found</div></div>';
+  return pyqManifest;
+}
+
+async function renderPYQ() {
+  document.getElementById('pyq-subtopic-view').style.display = 'none';
+  document.getElementById('pyq-subject-view').style.display = '';
+  document.getElementById('pyq-title').textContent = 'Previous Year Questions';
+  const grid = document.getElementById('pyq-subject-grid');
+  grid.innerHTML = '<div style="color:var(--text2);font-size:14px">Loading…</div>';
+  const manifest = await loadPyqManifest();
+  grid.innerHTML = '';
+  if (!manifest.subjects || manifest.subjects.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">PYQ bank coming soon.</div></div>';
+    return;
+  }
+  for (const subj of manifest.subjects) {
+    const card = document.createElement('div');
+    card.className = 'subject-card';
+    card.innerHTML = `<div class="sc-name">${subj.name}</div><div class="sc-count">${subj.total} questions</div>`;
+    card.onclick = () => openPyqSubject(subj);
+    grid.appendChild(card);
   }
 }
 
-function showPYQDetail(q) {
-  const overlay = document.getElementById('quiz-overlay');
-  overlay.classList.add('show');
-  document.getElementById('quiz-title').textContent = q.subject;
-  const pyqCount = document.getElementById('quiz-count');
-  if (pyqCount) pyqCount.textContent = '';
-  document.getElementById('quiz-nav').style.display = 'none';
-  const body = document.getElementById('quiz-body');
-  body.innerHTML = `
-    <div class="q-text">${q.question}</div>
-    <div class="q-options">${q.options.map((o, i) => `<div class="q-opt ${i === q.correct ? 'correct' : ''} disabled">${String.fromCharCode(65 + i)}) ${o}</div>`).join('')}</div>
-    <div class="q-explanation show" style="margin-top:16px">
-      ${renderExplanation(q.explanation)}
-    </div>`;
+function openPyqSubject(subj) {
+  document.getElementById('pyq-subject-view').style.display = 'none';
+  document.getElementById('pyq-subtopic-view').style.display = '';
+  document.getElementById('pyq-title').textContent = subj.name;
+  const list = document.getElementById('pyq-subtopic-list');
+  list.innerHTML = '';
+
+  const allBtn = document.createElement('div');
+  allBtn.className = 'pyq-item';
+  allBtn.innerHTML = `<div class="pq-subject">All Exams</div><div class="pq-q">Quiz all ${subj.total} ${subj.name} questions</div>`;
+  allBtn.onclick = () => openPyqSubtopic(subj, null);
+  list.appendChild(allBtn);
+
+  for (const st of (subj.subtopics || [])) {
+    const item = document.createElement('div');
+    item.className = 'pyq-item';
+    item.innerHTML = `<div class="pq-subject">${st.name}</div><div class="pq-q">${st.count} questions</div>`;
+    item.onclick = () => openPyqSubtopic(subj, st.name);
+    list.appendChild(item);
+  }
+}
+
+function pyqBackToSubjects() {
+  document.getElementById('pyq-subtopic-view').style.display = 'none';
+  document.getElementById('pyq-subject-view').style.display = '';
+  document.getElementById('pyq-title').textContent = 'Previous Year Questions';
+}
+
+async function openPyqSubtopic(subj, subtopicName) {
+  showToast('Loading questions...');
+  let questions = pyqSubjectCache[subj.file];
+  if (!questions) {
+    try {
+      let text = await xhrGetText(subj.file);
+      if (!text || text.trim() === '') throw new Error('empty');
+      questions = JSON.parse(text);
+    } catch (err) {
+      try {
+        const text = await xhrGetText('file:///android_asset/' + subj.file);
+        questions = JSON.parse(text);
+      } catch (err2) {
+        showToast('🚧 Subject is still under construction');
+        return;
+      }
+    }
+    pyqSubjectCache[subj.file] = questions;
+  }
+  const filtered = subtopicName ? questions.filter(q => q.subtopic === subtopicName) : questions;
+  if (!filtered || filtered.length === 0) { showToast('⚠️ No questions found'); return; }
+  startQuizWithList(filtered, subtopicName ? `${subj.name} — ${subtopicName}` : subj.name);
 }
 
 function renderExplanation(exp) {
@@ -1026,7 +1082,6 @@ function renderExplanation(exp) {
   return html;
 }
 
-document.getElementById('pyq-search').addEventListener('input', (e) => renderPYQ(e.target.value));
 
 // ===================== CEREB PAGE (lazy-loaded question bank) =====================
 let cerebManifest = null;
