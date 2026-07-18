@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>MedQuiz</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -367,6 +368,23 @@ Review your past mistakes to reinforce learning. Select a subject below to start
 <div class="imp-text">Tap to import any HTML question file<br><small>CEREB, tables, text lists — all formats supported</small></div>
 </div>
 <input type="file" id="file-input" class="file-input" accept=".html,.htm" multiple>
+</div>
+<div class="setting-group">
+<div class="sg-title">Sync Across Devices</div>
+<div id="sync-signed-out">
+<div class="si-desc" style="margin-bottom:12px">Sign in to keep your progress, Anki cards, and bookmarks in sync between this device and others.</div>
+<input type="email" id="sync-email" class="search-box" placeholder="you@email.com" style="margin-bottom:10px">
+<button class="btn btn-primary btn-block" onclick="sendMagicLink()">Send Magic Link</button>
+<div id="sync-status" style="margin-top:10px;font-size:13px;color:var(--text2)"></div>
+</div>
+<div id="sync-signed-in" style="display:none">
+<div class="setting-item">
+<div><div class="si-label">Signed in as</div><div class="si-desc" id="sync-email-display"></div></div>
+</div>
+<div class="setting-item" onclick="signOutSync()" style="cursor:pointer">
+<div><div class="si-label" style="color:var(--red)">Sign Out</div></div>
+</div>
+</div>
 </div>
 <div class="setting-group">
 <div class="sg-title">Preferences</div>
@@ -805,7 +823,7 @@ function openDB() {
   });
 }
 
-function dbPut(store, data) {
+function dbPutLocal(store, data) {
   return new Promise((resolve, reject) => {
     const tx = DB.transaction(store, 'readwrite');
     tx.objectStore(store).put(data);
@@ -832,7 +850,7 @@ function dbGetAll(store) {
   });
 }
 
-function dbDelete(store, key) {
+function dbDeleteLocal(store, key) {
   return new Promise((resolve, reject) => {
     const tx = DB.transaction(store, 'readwrite');
     tx.objectStore(store).delete(key);
@@ -841,13 +859,170 @@ function dbDelete(store, key) {
   });
 }
 
-function dbClear(store) {
+function dbClearLocal(store) {
   return new Promise((resolve, reject) => {
     const tx = DB.transaction(store, 'readwrite');
     tx.objectStore(store).clear();
     tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e);
   });
+}
+
+// Public write API: every caller in the app already goes through these three
+// functions for every store, so this is the single choke point where a
+// write-through mirror to Supabase (when signed in) can be added without
+// touching any of the many call sites. IndexedDB is written first and is
+// always the source of truth for what the UI shows immediately; the cloud
+// push happens after and is best-effort (failures are logged, never block
+// the local write or throw into the caller).
+async function dbPut(store, data) {
+  await dbPutLocal(store, data);
+  syncPush(store, data);
+}
+
+async function dbDelete(store, key) {
+  await dbDeleteLocal(store, key);
+  syncDelete(store, key);
+}
+
+async function dbClear(store) {
+  await dbClearLocal(store);
+  syncClear(store);
+}
+
+// ===================== CLOUD SYNC (Supabase) =====================
+// Anonymous/public config -- the anon key is designed to be embedded in
+// client code; all real access control happens via Postgres Row Level
+// Security policies on the Supabase project (each user can only ever read
+// or write rows where user_id = their own auth uid).
+const SUPABASE_URL = 'https://enbvczjicvjrfaenmywq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuYnZjemppY3ZqcmZhZW5teXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzNDYzODIsImV4cCI6MjA5OTkyMjM4Mn0.i2bgQRsCkudNDTUCKwMB207ZRuEu5d8GEfJ8WX4iozo';
+let sb = null;
+let syncUser = null;
+
+// Which local IndexedDB stores are mirrored to Supabase, and their remote
+// table + key field. 'importedQuestions' is deliberately left device-local
+// (custom file imports aren't part of what the user asked to sync).
+const SYNC_TABLES = {
+  progress:  { table: 'progress',   keyField: 'id' },
+  ankiCards: { table: 'anki_cards', keyField: 'id' },
+  bookmarks: { table: 'bookmarks',  keyField: 'id' },
+  settings:  { table: 'settings',   keyField: 'key' },
+};
+
+function initSync() {
+  if (typeof supabase === 'undefined') { console.warn('Supabase SDK failed to load; sync disabled'); return; }
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sb.auth.onAuthStateChange((event, session) => {
+    syncUser = session ? session.user : null;
+    renderSyncUI();
+    if (event === 'SIGNED_IN') pullRemoteData();
+  });
+  sb.auth.getSession().then(({ data }) => {
+    syncUser = data.session ? data.session.user : null;
+    renderSyncUI();
+    if (syncUser) pullRemoteData();
+  });
+}
+
+async function sendMagicLink() {
+  const emailEl = document.getElementById('sync-email');
+  const statusEl = document.getElementById('sync-status');
+  const email = emailEl.value.trim();
+  if (!email || !email.includes('@')) { statusEl.textContent = 'Enter a valid email.'; return; }
+  if (!sb) { statusEl.textContent = 'Sync is unavailable right now.'; return; }
+  statusEl.textContent = 'Sending...';
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+  statusEl.textContent = error ? ('Error: ' + error.message) : '✅ Check your email for the sign-in link.';
+}
+
+async function signOutSync() {
+  if (sb) await sb.auth.signOut();
+  syncUser = null;
+  renderSyncUI();
+  showToast('Signed out');
+}
+
+function renderSyncUI() {
+  const out = document.getElementById('sync-signed-out');
+  const inEl = document.getElementById('sync-signed-in');
+  if (!out || !inEl) return;
+  if (syncUser) {
+    out.style.display = 'none';
+    inEl.style.display = '';
+    const disp = document.getElementById('sync-email-display');
+    if (disp) disp.textContent = syncUser.email;
+  } else {
+    out.style.display = '';
+    inEl.style.display = 'none';
+  }
+}
+
+// Push one record to its mirrored table. Best-effort: local IndexedDB write
+// already completed and is what the UI reflects, so a failed/offline push
+// here is logged, not surfaced as an error to the caller.
+async function syncPush(store, data) {
+  const cfg = SYNC_TABLES[store];
+  if (!cfg || !sb || !syncUser || !data) return;
+  const keyVal = data[cfg.keyField];
+  if (keyVal == null) return;
+  try {
+    await sb.from(cfg.table).upsert(
+      { user_id: syncUser.id, [cfg.keyField]: keyVal, data },
+      { onConflict: `user_id,${cfg.keyField}` }
+    );
+  } catch (e) {
+    console.warn('sync push failed', store, e);
+  }
+}
+
+async function syncDelete(store, key) {
+  const cfg = SYNC_TABLES[store];
+  if (!cfg || !sb || !syncUser) return;
+  try {
+    await sb.from(cfg.table).delete().eq('user_id', syncUser.id).eq(cfg.keyField, key);
+  } catch (e) {
+    console.warn('sync delete failed', store, e);
+  }
+}
+
+async function syncClear(store) {
+  const cfg = SYNC_TABLES[store];
+  if (!cfg || !sb || !syncUser) return;
+  try {
+    await sb.from(cfg.table).delete().eq('user_id', syncUser.id);
+  } catch (e) {
+    console.warn('sync clear failed', store, e);
+  }
+}
+
+// On sign-in: pull every remote row down into IndexedDB, and push up any
+// local row the cloud doesn't have yet (covers progress made before ever
+// signing in, or made offline). This is a union merge, not a per-field
+// conflict resolver -- more than enough for one person's own devices.
+async function pullRemoteData() {
+  if (!sb || !syncUser) return;
+  for (const [store, cfg] of Object.entries(SYNC_TABLES)) {
+    try {
+      const { data: rows, error } = await sb.from(cfg.table).select('*').eq('user_id', syncUser.id);
+      if (error) throw error;
+      const localRows = await dbGetAll(store);
+      const remoteKeys = new Set();
+      for (const row of rows) {
+        remoteKeys.add(row[cfg.keyField]);
+        await dbPutLocal(store, row.data);
+      }
+      for (const localRow of localRows) {
+        if (!remoteKeys.has(localRow[cfg.keyField])) {
+          syncPush(store, localRow);
+        }
+      }
+    } catch (e) {
+      console.warn('pull failed for', store, e);
+    }
+  }
+  showToast('☁️ Synced');
+  if (document.getElementById('page-home').classList.contains('active')) renderHome();
 }
 
 // ===================== NAVIGATION =====================
@@ -2398,6 +2573,7 @@ function showToast(msg, dur) {
 async function init() {
   try {
     await openDB();
+    initSync();
     // Load progress
     const progressArr = await dbGetAll('progress');
     for (const p of progressArr) progressData[p.id] = p;
