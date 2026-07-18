@@ -10,7 +10,7 @@
 :root{
 --bg:#000000;--surface:#111111;--card:#111111;--border:#222222;
 --text:#e0e0e0;--text2:#999999;--text3:#666666;
---accent:#42a5f5;--green:#66bb6a;--red:#ef5350;--yellow:#ffee58;--orange:#ffa726;
+--accent:#42a5f5;--green:#3fb950;--red:#f85149;--yellow:#ffee58;--orange:#ffa726;
 --radius:12px;--toolbar-h:56px;
 }
 html.light-theme{
@@ -147,8 +147,8 @@ html:not(.light-theme) .streak-bar{box-shadow:none}
 .q-opt{background:var(--card);border:2px solid transparent;border-radius:var(--radius);padding:16px;font-size:15px;cursor:pointer;transition:border-color .2s;line-height:1.4;text-align:left;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.05)}
 html:not(.light-theme) .q-opt{box-shadow:none;border:1px solid var(--border)}
 .q-opt.selected{border-color:var(--accent)}
-.q-opt.correct{border-color:var(--green);background:rgba(63,185,80,.1)}
-.q-opt.wrong{border-color:var(--red);background:rgba(248,81,73,.1)}
+.q-opt.correct{border-color:var(--green);background:rgba(63,185,80,.18);box-shadow:0 0 0 1px var(--green) inset}
+.q-opt.wrong{border-color:var(--red);background:rgba(248,81,73,.18);box-shadow:0 0 0 1px var(--red) inset}
 .q-opt.disabled{pointer-events:none}
 .q-explanation{margin-top:24px;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;line-height:1.6;display:none;border-left:4px solid var(--accent)}
 .q-explanation.show{display:block}
