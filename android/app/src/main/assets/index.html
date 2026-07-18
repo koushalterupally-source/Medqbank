@@ -132,7 +132,12 @@ html:not(.light-theme) .streak-bar{box-shadow:none}
 .quiz-header .qh-bookmark{background:none;border:none;color:var(--text2);font-size:21px;cursor:pointer;padding:4px 6px;line-height:1}
 .quiz-header .qh-bookmark.active{color:#f59e0b}
 .quiz-header .qh-pause{background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:4px 6px;line-height:1}
-.resume-card{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:20px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);cursor:pointer}
+.resume-list{margin-bottom:20px}
+.resume-list:empty{display:none}
+.resume-heading{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--text2);margin-bottom:10px}
+.resume-heading .rh-clear{background:none;border:none;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0}
+.resume-card{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:10px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);cursor:pointer}
+.resume-card:last-child{margin-bottom:0}
 .resume-card .rc-emoji{font-size:26px;flex-shrink:0}
 .resume-card .rc-title{font-size:15px;font-weight:600;color:var(--text)}
 .resume-card .rc-sub{font-size:13px;color:var(--text2);margin-top:2px}
@@ -232,14 +237,7 @@ html:not(.light-theme) .setting-item{box-shadow:none}
 <div class="pages">
 <!-- HOME -->
 <div class="page active" id="page-home">
-<div class="resume-card" id="resume-card" style="display:none" onclick="resumePausedQuiz()">
-<div class="rc-emoji">⏸️</div>
-<div>
-<div class="rc-title">Resume Quiz</div>
-<div class="rc-sub" id="resume-sub"></div>
-</div>
-<button class="rc-discard" onclick="event.stopPropagation();discardPausedQuiz()" title="Discard">✕</button>
-</div>
+<div id="resume-list" class="resume-list"></div>
 <div class="quote-card" id="thought-card">
 <div class="emoji">💡</div>
 <div class="q-text" id="thought-text"></div>
@@ -1142,8 +1140,8 @@ function renderHome() {
   // Magic Module
   renderMagic();
 
-  // Resume-quiz banner
-  refreshResumeCard();
+  // Resume-quiz list (paused sessions)
+  renderResumeList();
 }
 
 function getSubjects() {
@@ -1531,14 +1529,14 @@ function startQuiz(subject) {
 
 function startQuizWithList(qs, title) {
   if (!qs || qs.length === 0) { showToast('No questions here'); return; }
-  // Starting a brand-new quiz supersedes any paused one (locally and in the cloud).
-  dbDelete('settings', 'pausedQuiz');
+  // A brand-new quiz starts unpaused; paused quizzes are kept (multiple allowed).
   quizState = {
     subject: title,
     questions: qs,
     current: 0,
     answers: {},
-    revealed: false
+    revealed: false,
+    pauseKey: null
   };
   const overlay = document.getElementById('quiz-overlay');
   overlay.classList.add('show');
@@ -1649,8 +1647,8 @@ function quizGoTo(idx) {
 
 function quizSubmit() {
   if (!quizState) return;
-  // Submitting completes the session -- clear any saved pause for it (locally and in the cloud).
-  dbDelete('settings', 'pausedQuiz');
+  // Submitting completes the session -- clear only this quiz's saved pause, if any.
+  if (quizState.pauseKey) dbDelete('settings', quizState.pauseKey);
   const { questions, answers } = quizState;
   let correct = 0, wrong = 0, unanswered = 0;
   for (const q of questions) {
@@ -1697,55 +1695,75 @@ function closeQuiz() {
 // IndexedDB instantly AND best-effort syncs via the settings table -- letting
 // you pause on one device and resume on another. The write is local-first, so
 // pausing is never blocked on the network.
-// Guards against the second tap of a double-tap on the pause button. After the
-// first tap saves and closes the overlay, the home page's resume card appears
-// with its Discard (✕) button at the same screen position the pause button
-// occupied -- so a quick second tap used to fall through and silently discard
-// the quiz that was just saved. The shield ignores resume-card interactions for
-// a short window after pausing; the in-flight flag stops re-entrant saves.
+//
+// Multiple quizzes can be paused at once (like Marrow's in-progress tests):
+// each paused session is its own settings row keyed 'pausedQuiz_<id>', so they
+// never overwrite each other, and each syncs as its own row. quizState carries
+// the key of the row it came from (pauseKey) so re-pausing a resumed quiz
+// updates that same row instead of spawning a duplicate.
+//
+// pauseTapShieldUntil guards the second tap of a double-tap: after pausing,
+// Home shows the resume list whose Discard (✕) can land where the pause button
+// was -- the shield ignores resume-list taps briefly. pauseInFlight stops
+// re-entrant saves.
 let pauseTapShieldUntil = 0;
 let pauseInFlight = false;
+
+function isPausedKey(k) {
+  // 'pausedQuiz' (legacy single-slot) or 'pausedQuiz_<id>' (multi-slot).
+  return k === 'pausedQuiz' || (typeof k === 'string' && k.startsWith('pausedQuiz_'));
+}
+
+async function listPausedQuizzes() {
+  try {
+    const rows = await dbGetAll('settings');
+    return rows
+      .filter(r => r && isPausedKey(r.key) && r.questions && r.questions.length)
+      .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+  } catch (e) { return []; }
+}
 
 async function pauseQuiz() {
   if (!quizState || pauseInFlight) return;
   pauseInFlight = true;
   try {
-  await dbPut('settings', {
-    key: 'pausedQuiz',
-    subject: quizState.subject,
-    questions: quizState.questions,
-    current: quizState.current,
-    answers: quizState.answers,
-    savedAt: Date.now()
-  });
-  document.getElementById('quiz-overlay').classList.remove('show');
-  quizState = null;
-  currentDisplayedQuestion = null;
-  pauseTapShieldUntil = Date.now() + 600;
-  showToast('⏸️ Quiz saved — resume it from any device');
-  renderHome();
+    // Reuse this session's key if it was resumed from a paused row; otherwise mint one.
+    if (!quizState.pauseKey) {
+      quizState.pauseKey = 'pausedQuiz_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+    await dbPut('settings', {
+      key: quizState.pauseKey,
+      subject: quizState.subject,
+      questions: quizState.questions,
+      current: quizState.current,
+      answers: quizState.answers,
+      savedAt: Date.now()
+    });
+    document.getElementById('quiz-overlay').classList.remove('show');
+    quizState = null;
+    currentDisplayedQuestion = null;
+    pauseTapShieldUntil = Date.now() + 600;
+    showToast('⏸️ Quiz saved — resume it from Home');
+    renderHome();
   } finally {
     pauseInFlight = false;
   }
 }
 
-async function getPausedQuiz() {
-  try { return await dbGet('settings', 'pausedQuiz'); }
-  catch (e) { return null; }
-}
-
-async function resumePausedQuiz() {
+async function resumePausedQuiz(key) {
   if (Date.now() < pauseTapShieldUntil) return; // ghost tap right after pausing
-  const saved = await getPausedQuiz();
-  if (!saved || !saved.questions || !saved.questions.length) { discardPausedQuiz(); return; }
+  const saved = await dbGet('settings', key);
+  if (!saved || !saved.questions || !saved.questions.length) { discardPausedQuiz(key); return; }
   quizState = {
     subject: saved.subject,
     questions: saved.questions,
     current: Math.min(saved.current || 0, saved.questions.length - 1),
     answers: saved.answers || {},
-    revealed: false
+    revealed: false,
+    pauseKey: key
   };
-  await dbDelete('settings', 'pausedQuiz');
+  // The row is now "active" again -- remove it from the paused list; it re-saves on next pause.
+  await dbDelete('settings', key);
   const overlay = document.getElementById('quiz-overlay');
   overlay.classList.add('show');
   document.getElementById('quiz-title').textContent = saved.subject;
@@ -1753,23 +1771,70 @@ async function resumePausedQuiz() {
   renderQuizQuestion();
 }
 
-async function discardPausedQuiz() {
+async function discardPausedQuiz(key) {
   if (Date.now() < pauseTapShieldUntil) return; // ghost tap right after pausing
-  await dbDelete('settings', 'pausedQuiz');
-  refreshResumeCard();
+  await dbDelete('settings', key);
+  renderResumeList();
 }
 
-async function refreshResumeCard() {
-  const card = document.getElementById('resume-card');
-  if (!card) return;
-  const saved = await getPausedQuiz();
-  if (saved && saved.questions && saved.questions.length) {
-    const answered = Object.keys(saved.answers || {}).length;
-    document.getElementById('resume-sub').textContent =
-      `${saved.subject} · ${(saved.current || 0) + 1}/${saved.questions.length} (${answered} answered)`;
-    card.style.display = 'flex';
-  } else {
-    card.style.display = 'none';
+async function discardAllPausedQuizzes() {
+  if (!confirm('Discard all paused quizzes?')) return;
+  const list = await listPausedQuizzes();
+  for (const r of list) await dbDelete('settings', r.key);
+  renderResumeList();
+}
+
+async function renderResumeList() {
+  const host = document.getElementById('resume-list');
+  if (!host) return;
+  const list = await listPausedQuizzes();
+  host.textContent = '';
+  if (!list.length) return;
+
+  const heading = document.createElement('div');
+  heading.className = 'resume-heading';
+  const label = document.createElement('span');
+  label.textContent = `In Progress (${list.length})`;
+  heading.appendChild(label);
+  if (list.length > 1) {
+    const clear = document.createElement('button');
+    clear.className = 'rh-clear';
+    clear.textContent = 'Clear all';
+    clear.onclick = discardAllPausedQuizzes;
+    heading.appendChild(clear);
+  }
+  host.appendChild(heading);
+
+  for (const r of list) {
+    const answered = Object.keys(r.answers || {}).length;
+    const card = document.createElement('div');
+    card.className = 'resume-card';
+    card.onclick = () => resumePausedQuiz(r.key);
+
+    const emoji = document.createElement('div');
+    emoji.className = 'rc-emoji';
+    emoji.textContent = '⏸️';
+
+    const mid = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'rc-title';
+    title.textContent = r.subject || 'Quiz';           // textContent = safe against any subject text
+    const sub = document.createElement('div');
+    sub.className = 'rc-sub';
+    sub.textContent = `${(r.current || 0) + 1}/${r.questions.length} · ${answered} answered`;
+    mid.appendChild(title);
+    mid.appendChild(sub);
+
+    const discard = document.createElement('button');
+    discard.className = 'rc-discard';
+    discard.title = 'Discard';
+    discard.textContent = '✕';
+    discard.onclick = (e) => { e.stopPropagation(); discardPausedQuiz(r.key); };
+
+    card.appendChild(emoji);
+    card.appendChild(mid);
+    card.appendChild(discard);
+    host.appendChild(card);
   }
 }
 
