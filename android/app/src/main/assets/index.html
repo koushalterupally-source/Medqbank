@@ -131,6 +131,12 @@ html:not(.light-theme) .streak-bar{box-shadow:none}
 .quiz-header .qh-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:4px 8px}
 .quiz-header .qh-bookmark{background:none;border:none;color:var(--text2);font-size:21px;cursor:pointer;padding:4px 6px;line-height:1}
 .quiz-header .qh-bookmark.active{color:#f59e0b}
+.quiz-header .qh-pause{background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:4px 6px;line-height:1}
+.resume-card{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:20px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);cursor:pointer}
+.resume-card .rc-emoji{font-size:26px;flex-shrink:0}
+.resume-card .rc-title{font-size:15px;font-weight:600;color:var(--text)}
+.resume-card .rc-sub{font-size:13px;color:var(--text2);margin-top:2px}
+.resume-card .rc-discard{margin-left:auto;background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:4px 8px;flex-shrink:0}
 .quiz-progress{height:4px;background:var(--border)}
 .quiz-progress .fill{height:100%;background:var(--accent);transition:width .3s}
 .quiz-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;padding-bottom:36px;position:relative}
@@ -226,6 +232,14 @@ html:not(.light-theme) .setting-item{box-shadow:none}
 <div class="pages">
 <!-- HOME -->
 <div class="page active" id="page-home">
+<div class="resume-card" id="resume-card" style="display:none" onclick="resumePausedQuiz()">
+<div class="rc-emoji">⏸️</div>
+<div>
+<div class="rc-title">Resume Quiz</div>
+<div class="rc-sub" id="resume-sub"></div>
+</div>
+<button class="rc-discard" onclick="event.stopPropagation();discardPausedQuiz()" title="Discard">✕</button>
+</div>
 <div class="quote-card" id="thought-card">
 <div class="emoji">💡</div>
 <div class="q-text" id="thought-text"></div>
@@ -437,6 +451,7 @@ A medical exam preparation app with spaced repetition.<br><br>
 <div class="qh-title" id="quiz-title">Quiz</div>
 <div class="qh-count" id="quiz-count"></div>
 <button class="qh-bookmark" id="quiz-bookmark-btn" onclick="toggleCurrentBookmark()">☆</button>
+<button class="qh-pause" id="quiz-pause-btn" onclick="pauseQuiz()" title="Pause &amp; save for later">⏸</button>
 <button class="qh-close" onclick="closeQuiz()">✕</button>
 </div>
 <div class="quiz-progress"><div class="fill" id="quiz-progress-fill"></div></div>
@@ -961,11 +976,16 @@ function renderSyncUI() {
 // Push one record to its mirrored table. Best-effort: local IndexedDB write
 // already completed and is what the UI reflects, so a failed/offline push
 // here is logged, not surfaced as an error to the caller.
+// Device-local settings keys that must never be pushed to the cloud (a paused
+// quiz can be a multi-MB snapshot and is meaningful only on this device).
+const SYNC_LOCAL_ONLY_SETTINGS = new Set(['pausedQuiz']);
+
 async function syncPush(store, data) {
   const cfg = SYNC_TABLES[store];
   if (!cfg || !sb || !syncUser || !data) return;
   const keyVal = data[cfg.keyField];
   if (keyVal == null) return;
+  if (store === 'settings' && SYNC_LOCAL_ONLY_SETTINGS.has(keyVal)) return;
   try {
     await sb.from(cfg.table).upsert(
       { user_id: syncUser.id, [cfg.keyField]: keyVal, data },
@@ -1126,6 +1146,9 @@ function renderHome() {
 
   // Magic Module
   renderMagic();
+
+  // Resume-quiz banner
+  refreshResumeCard();
 }
 
 function getSubjects() {
@@ -1513,6 +1536,8 @@ function startQuiz(subject) {
 
 function startQuizWithList(qs, title) {
   if (!qs || qs.length === 0) { showToast('No questions here'); return; }
+  // Starting a brand-new quiz supersedes any paused one.
+  dbDeleteLocal('settings', 'pausedQuiz');
   quizState = {
     subject: title,
     questions: qs,
@@ -1629,6 +1654,8 @@ function quizGoTo(idx) {
 
 function quizSubmit() {
   if (!quizState) return;
+  // Submitting completes the session -- clear any saved pause for it.
+  dbDeleteLocal('settings', 'pausedQuiz');
   const { questions, answers } = quizState;
   let correct = 0, wrong = 0, unanswered = 0;
   for (const q of questions) {
@@ -1667,6 +1694,71 @@ function closeQuiz() {
   quizState = null;
   currentDisplayedQuestion = null;
   renderHome();
+}
+
+// ---- Pause / Resume a quiz session ----
+// The paused session (question set, order, position, and this run's answers) is
+// stored locally so the user can leave a long qbank and pick it back up exactly
+// where they were. Kept device-local (dbPutLocal) so a multi-MB question set
+// with embedded figures never gets pushed through the settings sync table --
+// per-question progress already syncs separately.
+async function pauseQuiz() {
+  if (!quizState) return;
+  await dbPutLocal('settings', {
+    key: 'pausedQuiz',
+    subject: quizState.subject,
+    questions: quizState.questions,
+    current: quizState.current,
+    answers: quizState.answers,
+    savedAt: Date.now()
+  });
+  document.getElementById('quiz-overlay').classList.remove('show');
+  quizState = null;
+  currentDisplayedQuestion = null;
+  showToast('⏸️ Quiz saved — resume it from Home');
+  renderHome();
+}
+
+async function getPausedQuiz() {
+  try { return await dbGet('settings', 'pausedQuiz'); }
+  catch (e) { return null; }
+}
+
+async function resumePausedQuiz() {
+  const saved = await getPausedQuiz();
+  if (!saved || !saved.questions || !saved.questions.length) { discardPausedQuiz(); return; }
+  quizState = {
+    subject: saved.subject,
+    questions: saved.questions,
+    current: Math.min(saved.current || 0, saved.questions.length - 1),
+    answers: saved.answers || {},
+    revealed: false
+  };
+  await dbDeleteLocal('settings', 'pausedQuiz');
+  const overlay = document.getElementById('quiz-overlay');
+  overlay.classList.add('show');
+  document.getElementById('quiz-title').textContent = saved.subject;
+  document.getElementById('quiz-nav').style.display = 'flex';
+  renderQuizQuestion();
+}
+
+async function discardPausedQuiz() {
+  await dbDeleteLocal('settings', 'pausedQuiz');
+  refreshResumeCard();
+}
+
+async function refreshResumeCard() {
+  const card = document.getElementById('resume-card');
+  if (!card) return;
+  const saved = await getPausedQuiz();
+  if (saved && saved.questions && saved.questions.length) {
+    const answered = Object.keys(saved.answers || {}).length;
+    document.getElementById('resume-sub').textContent =
+      `${saved.subject} · ${(saved.current || 0) + 1}/${saved.questions.length} (${answered} answered)`;
+    card.style.display = 'flex';
+  } else {
+    card.style.display = 'none';
+  }
 }
 
 function closeResults() {
