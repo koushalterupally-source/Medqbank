@@ -72,6 +72,7 @@ html:not(.light-theme) .search-box{box-shadow:none;border:none}
 .jump-card:active{transform:scale(.97)}
 .jump-cereb{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
 .jump-pyq{background:linear-gradient(135deg,#0ea5e9,#2563eb)}
+.jump-bookmarks{background:linear-gradient(135deg,#f59e0b,#d97706)}
 .jump-card .jc-icon{font-size:26px;margin-bottom:10px}
 .jump-card .jc-name{font-size:16px;font-weight:700;margin-bottom:4px}
 .jump-card .jc-desc{font-size:12px;opacity:.85;line-height:1.4}
@@ -108,6 +109,9 @@ html:not(.light-theme) .streak-bar{box-shadow:none}
 .review-card{background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:40px 16px;margin-bottom:0;min-height:300px;display:flex;flex-direction:column;justify-content:center;text-align:center;font-size:22px;line-height:1.5;color:var(--text)}
 .review-card .cloze-hidden{background:var(--accent);color:#fff;padding:2px 8px;border-radius:6px;cursor:pointer;display:inline-block}
 .review-card .cloze-revealed{background:rgba(47,129,247,.1);color:var(--accent);padding:2px 8px;border-radius:6px;border:1px solid var(--accent)}
+.anki-answer-line{font-weight:700;color:var(--green);margin-bottom:8px;text-align:left}
+.anki-explanation{text-align:left;color:var(--text2)}
+.anki-explanation .q-images img,.anki-explanation .exp-images img{max-width:100%;border-radius:8px;margin-top:8px}
 .review-btns{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;margin-top:0}
 .review-btns button{padding:20px 4px;border:none;border-radius:0;background:transparent;color:var(--text);font-size:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600}
 .review-btns button:active{background:var(--surface)}
@@ -124,9 +128,13 @@ html:not(.light-theme) .streak-bar{box-shadow:none}
 .quiz-header .qh-title{font-size:15px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .quiz-header .qh-count{font-size:13px;font-weight:600;color:var(--text2);white-space:nowrap;margin:0 10px;flex-shrink:0}
 .quiz-header .qh-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:4px 8px}
+.quiz-header .qh-bookmark{background:none;border:none;color:var(--text2);font-size:21px;cursor:pointer;padding:4px 6px;line-height:1}
+.quiz-header .qh-bookmark.active{color:#f59e0b}
 .quiz-progress{height:4px;background:var(--border)}
 .quiz-progress .fill{height:100%;background:var(--accent);transition:width .3s}
-.quiz-body{flex:1;overflow-y:auto;padding:20px}
+.quiz-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;padding-bottom:36px;position:relative}
+.quiz-scroll-hint{position:sticky;bottom:0;left:0;right:0;height:28px;margin:-28px -20px 0;background:linear-gradient(to bottom,transparent,var(--bg));pointer-events:none;display:none}
+.quiz-scroll-hint.show{display:block}
 .quiz-nav{display:flex;gap:8px;padding:16px 20px;background:var(--surface);border-top:1px solid var(--border)}
 .quiz-nav button{flex:1}
 .q-text{font-size:17px;line-height:1.5;margin-bottom:24px;font-weight:500}
@@ -134,6 +142,7 @@ html:not(.light-theme) .streak-bar{box-shadow:none}
 .q-images img{max-width:100%;height:auto;border-radius:10px;border:1px solid var(--border);background:#fff}
 .exp-images{margin-top:12px;display:flex;flex-direction:column;gap:10px}
 .exp-images img{max-width:100%;height:auto;border-radius:8px;border:1px solid var(--border);background:#fff}
+.figure-unavailable{padding:14px;border-radius:10px;border:1px dashed var(--border);color:var(--text2);font-size:13px;text-align:center}
 .q-options{display:flex;flex-direction:column;gap:12px}
 .q-opt{background:var(--card);border:2px solid transparent;border-radius:var(--radius);padding:16px;font-size:15px;cursor:pointer;transition:border-color .2s;line-height:1.4;text-align:left;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.05)}
 html:not(.light-theme) .q-opt{box-shadow:none;border:1px solid var(--border)}
@@ -258,6 +267,11 @@ Review your past mistakes to reinforce learning. Select a subject below to start
 <div class="jc-name">Previous Year Qs</div>
 <div class="jc-desc">AIIMS · NEET · INICET</div>
 </div>
+<div class="jump-card jump-bookmarks" onclick="switchPage('bookmarks')">
+<div class="jc-icon">🔖</div>
+<div class="jc-name">Bookmarks</div>
+<div class="jc-desc" id="home-bookmark-count">Saved questions</div>
+</div>
 </div>
 </div>
 
@@ -271,6 +285,18 @@ Review your past mistakes to reinforce learning. Select a subject below to start
 <button class="btn btn-sm" onclick="pyqBackToSubjects()">← Subjects</button>
 <div id="pyq-subtopic-list" style="margin-top:10px"></div>
 </div>
+</div>
+
+<!-- BOOKMARKS -->
+<div class="page" id="page-bookmarks">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+<button class="btn btn-sm" onclick="switchPage('home')">← Home</button>
+</div>
+<div class="section-title">🔖 Bookmarks</div>
+<div id="bookmarks-toolbar" style="display:none;margin-bottom:12px">
+<button class="btn btn-sm btn-primary" onclick="studyAllBookmarks()">▶ Quiz all bookmarked</button>
+</div>
+<div id="bookmarks-list"></div>
 </div>
 
 <!-- CEREB -->
@@ -392,6 +418,7 @@ A medical exam preparation app with spaced repetition.<br><br>
 <div class="quiz-header">
 <div class="qh-title" id="quiz-title">Quiz</div>
 <div class="qh-count" id="quiz-count"></div>
+<button class="qh-bookmark" id="quiz-bookmark-btn" onclick="toggleCurrentBookmark()">☆</button>
 <button class="qh-close" onclick="closeQuiz()">✕</button>
 </div>
 <div class="quiz-progress"><div class="fill" id="quiz-progress-fill"></div></div>
@@ -747,12 +774,14 @@ let allQuestions = [...BUILTIN_QUESTIONS];
 let settings = { showExplanations: true, lightMode: false };
 let quizState = null;
 let ankiReviewState = null;
+let currentDisplayedQuestion = null; // whichever question is on screen in the quiz overlay
+let bookmarkedIds = new Set(); // cache, kept in sync with the 'bookmarks' store
 let progressData = {}; // { questionId: { attempted, correct } }
 
 // ===================== INDEXEDDB =====================
 function openDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('MedQuizDB', 3);
+    const req = indexedDB.open('MedQuizDB', 4);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('ankiCards')) {
@@ -766,6 +795,9 @@ function openDB() {
       }
       if (!db.objectStoreNames.contains('importedQuestions')) {
         db.createObjectStore('importedQuestions', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('bookmarks')) {
+        db.createObjectStore('bookmarks', { keyPath: 'id' });
       }
     };
     req.onsuccess = (e) => { DB = e.target.result; resolve(DB); };
@@ -823,12 +855,15 @@ function switchPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+  // Not every page has a bottom-nav entry (e.g. Bookmarks, opened from the home
+  // screen card) -- only highlight a tab when one actually maps to this page.
   const idx = { home: 0, pyq: 1, cereb: 2, anki: 3, settings: 4 }[name];
-  document.querySelectorAll('.toolbar button')[idx].classList.add('active');
+  if (idx != null) document.querySelectorAll('.toolbar button')[idx].classList.add('active');
   if (name === 'home') renderHome();
   if (name === 'pyq') renderPYQ();
   if (name === 'cereb') renderCereb();
   if (name === 'anki') renderAnki();
+  if (name === 'bookmarks') renderBookmarks();
 }
 
 // ===================== HOME PAGE =====================
@@ -897,6 +932,7 @@ function renderHome() {
   document.getElementById('topic-desc').textContent = '';
   document.getElementById('topic-card').onclick = null;
   setupTopicOfTheDay();
+  updateHomeBookmarkCount();
 
   // Stats
   let total = allQuestions.length; // This is baseline from builtins/imported
@@ -1064,6 +1100,78 @@ async function openPyqSubtopic(subj, subtopicName) {
   startQuizWithList(filtered, subtopicName ? `${subj.name} — ${subtopicName}` : subj.name);
 }
 
+// ===================== BOOKMARKS =====================
+function updateBookmarkButton() {
+  const btn = document.getElementById('quiz-bookmark-btn');
+  if (!btn) return;
+  if (!currentDisplayedQuestion) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  const on = bookmarkedIds.has(currentDisplayedQuestion.id);
+  btn.textContent = on ? '★' : '☆';
+  btn.classList.toggle('active', on);
+}
+
+async function toggleCurrentBookmark() {
+  const q = currentDisplayedQuestion;
+  if (!q) return;
+  if (bookmarkedIds.has(q.id)) {
+    bookmarkedIds.delete(q.id);
+    await dbDelete('bookmarks', q.id);
+    showToast('Bookmark removed');
+  } else {
+    bookmarkedIds.add(q.id);
+    await dbPut('bookmarks', { id: q.id, question: q, addedAt: Date.now() });
+    showToast('🔖 Bookmarked');
+  }
+  updateBookmarkButton();
+  updateHomeBookmarkCount();
+}
+
+async function updateHomeBookmarkCount() {
+  const el = document.getElementById('home-bookmark-count');
+  if (!el) return;
+  const n = bookmarkedIds.size;
+  el.textContent = n === 0 ? 'Saved questions' : `${n} saved question${n === 1 ? '' : 's'}`;
+}
+
+async function renderBookmarks() {
+  const list = document.getElementById('bookmarks-list');
+  const toolbar = document.getElementById('bookmarks-toolbar');
+  const bookmarks = await dbGetAll('bookmarks');
+  bookmarks.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+  list.innerHTML = '';
+  toolbar.style.display = bookmarks.length ? '' : 'none';
+  if (bookmarks.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="es-icon">🔖</div><div class="es-text">No bookmarks yet. Tap the ☆ on any question to save it here.</div></div>';
+    return;
+  }
+  for (const b of bookmarks) {
+    const q = b.question;
+    const item = document.createElement('div');
+    item.className = 'pyq-item';
+    const preview = (q.question || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 90) || '(figure question)';
+    item.innerHTML = `<div class="pq-subject">${q.subject || ''}${q.subtopic ? ' — ' + q.subtopic : ''}</div>
+      <div class="pq-q">${preview}${preview.length >= 90 ? '…' : ''}</div>
+      <button class="btn btn-sm bm-remove" data-id="${q.id}" style="margin-top:8px">Remove</button>`;
+    item.querySelector('.bm-remove').onclick = async (e) => {
+      e.stopPropagation();
+      bookmarkedIds.delete(q.id);
+      await dbDelete('bookmarks', q.id);
+      updateHomeBookmarkCount();
+      renderBookmarks();
+    };
+    item.onclick = () => startQuizWithList([q], (q.subject || 'Bookmark') + ' — saved question');
+    list.appendChild(item);
+  }
+}
+
+function studyAllBookmarks() {
+  dbGetAll('bookmarks').then(bookmarks => {
+    if (!bookmarks.length) { showToast('No bookmarks yet'); return; }
+    startQuizWithList(bookmarks.map(b => b.question), 'Bookmarks');
+  });
+}
+
 function renderExplanation(exp) {
   if (!exp) return '';
   let html = '<div class="exp-title">Explanation</div>';
@@ -1190,17 +1298,13 @@ async function openCerebSubtopic(subj, subtopicName) {
         if (!text || text.trim() === '') throw new Error('File is empty');
         questions = JSON.parse(text);
       } catch (err2) {
-        console.warn('Subject JSON not found. Falling back to built-in questions.', err2);
-        const fallbackQs = allQuestions.filter(q => q.subject === subj.name);
-        if (fallbackQs.length > 0) {
-          questions = fallbackQs;
-          if (!subtopicName) {
-            showToast('⚠️ Full bank not downloaded. Showing limited built-in questions.');
-          }
-        } else {
-          showToast('🚧 Subject is still under construction');
-          return;
-        }
+        // No real question bank for this subject yet. Previously this fell back to a
+        // handful of unrelated built-in demo questions, which looked like a genuine
+        // (but tiny) quiz for the subject and was misleading. Show a clear "not ready"
+        // state instead.
+        console.warn('Subject JSON not found; no fallback shown.', err2);
+        showToast('🚧 Subject is still under construction');
+        return;
       }
     }
     cerebSubjectCache[subj.file] = questions;
@@ -1255,6 +1359,8 @@ function renderQuizQuestion() {
   const total = questions.length;
   const pct = ((current + 1) / total * 100);
 
+  currentDisplayedQuestion = q;
+  updateBookmarkButton();
   document.getElementById('quiz-progress-fill').style.width = pct + '%';
   document.getElementById('btn-prev').style.display = current > 0 ? '' : 'none';
   document.getElementById('btn-next').style.display = current < total - 1 ? '' : 'none';
@@ -1296,7 +1402,23 @@ function renderQuizQuestion() {
     }).join('')}</div>
     <div class="q-explanation ${answered && settings.showExplanations ? 'show' : ''}" id="q-explanation">
       ${answered ? renderExplanation(q.explanation) : ''}
-    </div>`;
+    </div>
+    <div class="quiz-scroll-hint" id="quiz-scroll-hint"></div>`;
+  body.scrollTop = 0;
+  updateQuizScrollHint();
+}
+
+// Long question stems (common in CEREB's verbose clinical-vignette questions) can
+// push the options below the fold with no visible cue that there's more to scroll
+// to. Show a bottom fade whenever the body actually overflows and hasn't been
+// scrolled to the end yet, so it's obvious there's more content below.
+function updateQuizScrollHint() {
+  const body = document.getElementById('quiz-body');
+  const hint = document.getElementById('quiz-scroll-hint');
+  if (!body || !hint) return;
+  const overflowing = body.scrollHeight - body.clientHeight > 8;
+  const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 8;
+  hint.classList.toggle('show', overflowing && !atBottom);
 }
 
 function selectOption(idx) {
@@ -1368,6 +1490,7 @@ function quizSubmit() {
 function closeQuiz() {
   document.getElementById('quiz-overlay').classList.remove('show');
   quizState = null;
+  currentDisplayedQuestion = null;
   renderHome();
 }
 
@@ -1382,28 +1505,26 @@ function closeResults() {
 async function createAnkiCard(q) {
   const existing = await dbGet('ankiCards', 'anki_' + q.id);
   if (existing) return; // don't duplicate
+  if (!q.options || !q.options.length || q.correct == null) return; // nothing to test
 
-  // Create cloze deletion from explanation.short
-  let clozeText = q.explanation && q.explanation.short ? q.explanation.short : q.question;
   const correctAnswer = q.options[q.correct];
-
-  // Simple cloze: replace the answer in the text with {{c1::answer}}
-  let cloze = clozeText;
-  if (cloze.includes(correctAnswer)) {
-    cloze = cloze.replace(correctAnswer, '{{c1::' + correctAnswer + '}}');
-  } else {
-    // If answer not in text, create a Q&A cloze
-    cloze = q.question + '<br><br>Answer: {{c1::' + correctAnswer + '}}';
-  }
+  // The front is exactly the question as shown in the quiz (may embed a figure) --
+  // reused verbatim rather than spliced into a cloze deletion. A naive substring
+  // replace to hide the answer breaks badly whenever the "answer" is a bare
+  // A/B/C/D letter (the fallback for OCR'd image questions): it would match the
+  // first stray occurrence of that letter anywhere in the text and hide the wrong
+  // thing, or find nothing and silently show an un-hidden "answer".
+  const front = q.question;
+  const backParts = [`<div class="anki-answer-line">✅ ${String.fromCharCode(65 + q.correct)}) ${correctAnswer}</div>`];
+  const detail = q.explanation && (q.explanation.detail || q.explanation.short);
+  if (detail) backParts.push(`<div class="anki-explanation">${detail}</div>`);
 
   const card = {
     id: 'anki_' + q.id,
     questionId: q.id,
     subject: q.subject,
-    question: q.question,
-    clozeText: cloze,
-    fullAnswer: correctAnswer,
-    explanation: q.explanation ? q.explanation.short : '',
+    front,
+    back: backParts.join(''),
     // SM-2 fields
     easeFactor: 2.5,
     interval: 0, // in minutes
@@ -1413,7 +1534,8 @@ async function createAnkiCard(q) {
     status: 'new' // new, learning, review
   };
   await dbPut('ankiCards', card);
-  showToast('📇 Anki card created for: ' + q.question.substring(0, 40) + '...');
+  const preview = q.question.replace(/<[^>]+>/g, '').trim().slice(0, 40) || 'this question';
+  showToast('📇 Anki card created: ' + preview + '...');
 }
 
 async function renderAnki() {
@@ -1682,12 +1804,13 @@ function renderAnkiCard() {
     return;
   }
   const card = cards[current];
-  // Display cloze with hidden answer
-  let display = card.clozeText.replace(/\{\{c1::(.*?)\}\}/g, '<span class="cloze-hidden" onclick="this.className=\'cloze-revealed\'">[...]</span>');
+  // Cards created before this format existed only have the old clozeText/question
+  // fields; fall back to those so a user's existing deck doesn't break/blank out.
+  const front = card.front != null ? card.front : card.question;
   document.getElementById('anki-card-display').innerHTML = `
     <div style="font-size:12px;color:var(--accent);margin-bottom:8px">${card.subject} — Card ${current + 1}/${cards.length}</div>
-    <div style="font-size:14px;line-height:1.6">${display}</div>
-    <div style="margin-top:8px;font-size:12px;color:var(--text2)">${card.question}</div>`;
+    <div style="font-size:15px;line-height:1.6">${front}</div>
+    <div style="margin-top:14px;color:var(--text2);font-size:13px">Tap to reveal answer</div>`;
   document.getElementById('anki-answer-btn').style.display = '';
   document.getElementById('anki-review-btns').style.display = 'none';
 }
@@ -1695,12 +1818,14 @@ function renderAnkiCard() {
 function revealAnkiAnswer() {
   if (!ankiReviewState) return;
   const card = ankiReviewState.cards[ankiReviewState.current];
-  // Show the answer
-  let display = card.clozeText.replace(/\{\{c1::(.*?)\}\}/g, '<span class="cloze-revealed">$1</span>');
+  const front = card.front != null ? card.front : card.question;
+  const back = card.back != null ? card.back
+    : (card.fullAnswer ? `<div class="anki-answer-line">✅ ${card.fullAnswer}</div>` : '')
+      + (card.explanation ? `<div class="anki-explanation">${card.explanation}</div>` : '');
   document.getElementById('anki-card-display').innerHTML = `
     <div style="font-size:12px;color:var(--accent);margin-bottom:8px">${card.subject}</div>
-    <div style="font-size:14px;line-height:1.6">${display}</div>
-    ${card.explanation ? '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2)">' + card.explanation + '</div>' : ''}`;
+    <div style="font-size:15px;line-height:1.6">${front}</div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2)">${back}</div>`;
   document.getElementById('anki-answer-btn').style.display = 'none';
   document.getElementById('anki-review-btns').style.display = '';
   // Show/hide "Again" button based on status
@@ -2300,12 +2425,36 @@ async function init() {
     for (const q of imported) {
       if (!allQuestions.find(bq => bq.id === q.id)) allQuestions.push(q);
     }
+
+    // Load bookmarks
+    const bookmarks = await dbGetAll('bookmarks');
+    bookmarkedIds = new Set(bookmarks.map(b => b.id));
     renderHome();
   } catch (err) {
     console.error('Init error:', err);
     renderHome();
   }
 }
+
+// Some CEREB question figures are hosted externally and their source links have since
+// gone dead (403 from the image host). Rather than showing the browser's broken-image
+// icon, swap in a small honest placeholder so it's clear a figure was expected but can't
+// be shown, instead of silently vanishing or looking like a rendering glitch.
+// 'error' events on <img> don't bubble, so this listener must use capture phase.
+document.addEventListener('error', (e) => {
+  const el = e.target;
+  if (el.tagName === 'IMG' && el.closest('.q-images, .exp-images')) {
+    const note = document.createElement('div');
+    note.className = 'figure-unavailable';
+    note.textContent = '🖼️ Figure unavailable (source link no longer accessible)';
+    el.replaceWith(note);
+  }
+}, true);
+
+// quiz-body itself is a persistent element (only its innerHTML is replaced on each
+// question render), so the scroll listener only needs to be attached once here.
+const quizBodyEl = document.getElementById('quiz-body');
+if (quizBodyEl) quizBodyEl.addEventListener('scroll', updateQuizScrollHint);
 
 init();
 
