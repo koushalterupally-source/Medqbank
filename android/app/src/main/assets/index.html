@@ -1697,8 +1697,19 @@ function closeQuiz() {
 // IndexedDB instantly AND best-effort syncs via the settings table -- letting
 // you pause on one device and resume on another. The write is local-first, so
 // pausing is never blocked on the network.
+// Guards against the second tap of a double-tap on the pause button. After the
+// first tap saves and closes the overlay, the home page's resume card appears
+// with its Discard (✕) button at the same screen position the pause button
+// occupied -- so a quick second tap used to fall through and silently discard
+// the quiz that was just saved. The shield ignores resume-card interactions for
+// a short window after pausing; the in-flight flag stops re-entrant saves.
+let pauseTapShieldUntil = 0;
+let pauseInFlight = false;
+
 async function pauseQuiz() {
-  if (!quizState) return;
+  if (!quizState || pauseInFlight) return;
+  pauseInFlight = true;
+  try {
   await dbPut('settings', {
     key: 'pausedQuiz',
     subject: quizState.subject,
@@ -1710,8 +1721,12 @@ async function pauseQuiz() {
   document.getElementById('quiz-overlay').classList.remove('show');
   quizState = null;
   currentDisplayedQuestion = null;
+  pauseTapShieldUntil = Date.now() + 600;
   showToast('⏸️ Quiz saved — resume it from any device');
   renderHome();
+  } finally {
+    pauseInFlight = false;
+  }
 }
 
 async function getPausedQuiz() {
@@ -1720,6 +1735,7 @@ async function getPausedQuiz() {
 }
 
 async function resumePausedQuiz() {
+  if (Date.now() < pauseTapShieldUntil) return; // ghost tap right after pausing
   const saved = await getPausedQuiz();
   if (!saved || !saved.questions || !saved.questions.length) { discardPausedQuiz(); return; }
   quizState = {
@@ -1738,6 +1754,7 @@ async function resumePausedQuiz() {
 }
 
 async function discardPausedQuiz() {
+  if (Date.now() < pauseTapShieldUntil) return; // ghost tap right after pausing
   await dbDelete('settings', 'pausedQuiz');
   refreshResumeCard();
 }
