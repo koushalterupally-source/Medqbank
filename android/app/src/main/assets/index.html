@@ -976,16 +976,11 @@ function renderSyncUI() {
 // Push one record to its mirrored table. Best-effort: local IndexedDB write
 // already completed and is what the UI reflects, so a failed/offline push
 // here is logged, not surfaced as an error to the caller.
-// Device-local settings keys that must never be pushed to the cloud (a paused
-// quiz can be a multi-MB snapshot and is meaningful only on this device).
-const SYNC_LOCAL_ONLY_SETTINGS = new Set(['pausedQuiz']);
-
 async function syncPush(store, data) {
   const cfg = SYNC_TABLES[store];
   if (!cfg || !sb || !syncUser || !data) return;
   const keyVal = data[cfg.keyField];
   if (keyVal == null) return;
-  if (store === 'settings' && SYNC_LOCAL_ONLY_SETTINGS.has(keyVal)) return;
   try {
     await sb.from(cfg.table).upsert(
       { user_id: syncUser.id, [cfg.keyField]: keyVal, data },
@@ -1536,8 +1531,8 @@ function startQuiz(subject) {
 
 function startQuizWithList(qs, title) {
   if (!qs || qs.length === 0) { showToast('No questions here'); return; }
-  // Starting a brand-new quiz supersedes any paused one.
-  dbDeleteLocal('settings', 'pausedQuiz');
+  // Starting a brand-new quiz supersedes any paused one (locally and in the cloud).
+  dbDelete('settings', 'pausedQuiz');
   quizState = {
     subject: title,
     questions: qs,
@@ -1654,8 +1649,8 @@ function quizGoTo(idx) {
 
 function quizSubmit() {
   if (!quizState) return;
-  // Submitting completes the session -- clear any saved pause for it.
-  dbDeleteLocal('settings', 'pausedQuiz');
+  // Submitting completes the session -- clear any saved pause for it (locally and in the cloud).
+  dbDelete('settings', 'pausedQuiz');
   const { questions, answers } = quizState;
   let correct = 0, wrong = 0, unanswered = 0;
   for (const q of questions) {
@@ -1698,13 +1693,13 @@ function closeQuiz() {
 
 // ---- Pause / Resume a quiz session ----
 // The paused session (question set, order, position, and this run's answers) is
-// stored locally so the user can leave a long qbank and pick it back up exactly
-// where they were. Kept device-local (dbPutLocal) so a multi-MB question set
-// with embedded figures never gets pushed through the settings sync table --
-// per-question progress already syncs separately.
+// saved through the normal write-through path (dbPut), so it lands in local
+// IndexedDB instantly AND best-effort syncs via the settings table -- letting
+// you pause on one device and resume on another. The write is local-first, so
+// pausing is never blocked on the network.
 async function pauseQuiz() {
   if (!quizState) return;
-  await dbPutLocal('settings', {
+  await dbPut('settings', {
     key: 'pausedQuiz',
     subject: quizState.subject,
     questions: quizState.questions,
@@ -1715,7 +1710,7 @@ async function pauseQuiz() {
   document.getElementById('quiz-overlay').classList.remove('show');
   quizState = null;
   currentDisplayedQuestion = null;
-  showToast('⏸️ Quiz saved — resume it from Home');
+  showToast('⏸️ Quiz saved — resume it from any device');
   renderHome();
 }
 
@@ -1734,7 +1729,7 @@ async function resumePausedQuiz() {
     answers: saved.answers || {},
     revealed: false
   };
-  await dbDeleteLocal('settings', 'pausedQuiz');
+  await dbDelete('settings', 'pausedQuiz');
   const overlay = document.getElementById('quiz-overlay');
   overlay.classList.add('show');
   document.getElementById('quiz-title').textContent = saved.subject;
@@ -1743,7 +1738,7 @@ async function resumePausedQuiz() {
 }
 
 async function discardPausedQuiz() {
-  await dbDeleteLocal('settings', 'pausedQuiz');
+  await dbDelete('settings', 'pausedQuiz');
   refreshResumeCard();
 }
 
